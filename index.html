@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Dashboard — LBTC Vault + TCY Staker</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:#07090f;--bg2:#0d1018;--bg3:#12151e;
+  --card:rgba(255,255,255,0.03);--cb:rgba(255,255,255,0.07);--ch:rgba(255,255,255,0.05);
+  --or:#F7931A;--ord:rgba(247,147,26,0.14);--org:rgba(247,147,26,0.22);
+  --te:#00C4A0;--ted:rgba(0,196,160,0.12);--teb:rgba(0,196,160,0.22);
+  --re:#FF5252;--red:rgba(255,82,82,0.12);
+  --bl:#4A9EFF;--bld:rgba(74,158,255,0.12);
+  --go:#FFD166;--god:rgba(255,209,102,0.12);
+  --pu:#A78BFA;--pud:rgba(167,139,250,0.12);
+  --tx:#DDD9CF;--t2:#7C7C8E;--t3:#484858;
+  --mo:'IBM Plex Mono',monospace;--sa:'IBM Plex Sans',sans-serif;
+  --r:10px;--rs:6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:var(--mo);font-size:13px;line-height:1.5;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(247,147,26,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(247,147,26,.012) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.app{position:relative;z-index:1}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(7,9,15,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--cb)}
+.nav-top{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:52px}
+.nb{display:flex;align-items:center;gap:10px}
+.nl{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.nl-port{background:linear-gradient(135deg,var(--or),var(--te));color:#000}
+.nt{font-size:13px;font-weight:500;letter-spacing:.06em}
+.ns{font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase}
+.nr{display:flex;align-items:center;gap:10px}
+.live{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--te);letter-spacing:.1em;text-transform:uppercase}
+.ld{width:6px;height:6px;border-radius:50%;background:var(--te);animation:pd 2s ease-in-out infinite}
+@keyframes pd{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+#clock{font-size:11px;color:var(--t2)}
+.btn{padding:5px 12px;border-radius:var(--rs);border:1px solid var(--cb);background:var(--card);color:var(--t2);cursor:pointer;font-family:var(--mo);font-size:11px;letter-spacing:.06em;transition:all .15s}
+.btn:hover{background:var(--ch);color:var(--tx);border-color:rgba(255,255,255,.14)}
+.bto{background:var(--ord);border-color:var(--or);color:var(--or)}
+.bto:hover{background:var(--org)}
+.btte{background:var(--ted);border-color:var(--te);color:var(--te)}
+.btte:hover{background:var(--teb)}
+
+/* TAB BAR */
+.tab-bar{display:flex;align-items:center;padding:0 28px;gap:2px;border-top:1px solid rgba(255,255,255,.04)}
+.ptab{padding:10px 16px;border:none;background:transparent;color:var(--t3);cursor:pointer;font-family:var(--mo);font-size:11px;letter-spacing:.08em;text-transform:uppercase;position:relative;transition:color .15s}
+.ptab:hover{color:var(--t2)}
+.ptab.active{color:var(--tx)}
+.ptab.active::after{content:'';position:absolute;bottom:0;left:16px;right:16px;height:2px;border-radius:1px}
+.ptab[data-tab="portfolio"].active::after{background:linear-gradient(90deg,var(--or),var(--te))}
+.ptab[data-tab="lombard"].active::after{background:var(--or)}
+.ptab[data-tab="tcy"].active::after{background:var(--te)}
+.tab-dot{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
+.dot-or{background:var(--or)}.dot-te{background:var(--te)}.dot-both{background:linear-gradient(135deg,var(--or),var(--te))}
+
+main{padding:22px 28px;max-width:1440px;margin:0 auto}
+.tab-section{display:none}.tab-section.active{display:block}
+
+/* HERO */
+.hero-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:860px){.hero-row{grid-template-columns:1fr}}
+.hero-card{background:var(--card);border:1px solid var(--cb);border-radius:var(--r);padding:22px 24px;animation:fu .35s ease both}
+.hero-card.primary-or{border-color:rgba(247,147,26,.3);background:rgba(247,147,26,.03)}
+.hero-card.primary-te{border-color:rgba(0,196,160,.3);background:rgba(0,196,160,.03)}
+.hero-card.primary-both{border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.025)}
+.hero-lbl{font-size:10px;color:var(--t3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.hero-usd{font-size:36px;font-weight:500;line-height:1;margin-bottom:8px}
+.hero-usd.or{color:var(--or)}.hero-usd.te{color:var(--te)}.hero-usd.pu{color:var(--pu)}
+.hero-btc{font-size:15px;color:var(--tx);margin-bottom:4px}
+.hero-sub{font-size:11px;color:var(--t3);line-height:1.8}
+.msm{background:var(--card);border:1px solid var(--cb);border-radius:var(--r);padding:18px 20px;animation:fu .35s ease .07s both}
+.ml{font-size:10px;color:var(--t3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.mv{font-size:22px;font-weight:500;font-family:var(--mo);color:var(--tx);line-height:1;margin-bottom:5px}
+.mc{font-size:11px}
+.up{color:var(--te)}.dn{color:var(--re)}.nt2{color:var(--t2)}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* SEC METRICS */
+.m4{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.mc4{background:var(--card);border:1px solid var(--cb);border-radius:var(--r);padding:13px 16px;animation:fu .4s ease both}
+.mc4:nth-child(1){animation-delay:.04s}.mc4:nth-child(2){animation-delay:.08s}.mc4:nth-child(3){animation-delay:.12s}.mc4:nth-child(4){animation-delay:.16s}.mc4:nth-child(5){animation-delay:.2s}.mc4:nth-child(6){animation-delay:.24s}
+
+/* WALLET BAR */
+.wb-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.wc{display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:100px;border:1px solid var(--cb);background:var(--card);cursor:pointer;transition:all .15s;font-size:11px}
+.wc.active{border-color:var(--or);background:var(--ord);color:var(--or)}
+.wc:hover:not(.active){background:var(--ch)}
+.wd{width:6px;height:6px;border-radius:50%;background:var(--or);flex-shrink:0}
+.wr{width:13px;height:13px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.07);font-size:9px;color:var(--t2)}
+.wr:hover{background:var(--red);color:var(--re)}
+.addw{padding:5px 12px;border-radius:100px;border:1px dashed var(--t3);background:transparent;color:var(--t3);cursor:pointer;font-family:var(--mo);font-size:11px;transition:all .15s}
+.addw:hover{border-color:var(--or);color:var(--or);background:var(--ord)}
+
+/* SEC DIVIDER */
+.sec{font-size:10px;color:var(--t3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.sec::after{content:'';flex:1;height:1px;background:var(--cb)}
+
+/* CHARTS GRID */
+.cg{display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:18px}
+@media(max-width:960px){.cg{grid-template-columns:1fr}}
+.cc{background:var(--card);border:1px solid var(--cb);border-radius:var(--r);padding:20px 22px;animation:fu .45s ease .12s both}
+.ch2{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.ct{font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase}
+.cs{font-size:17px;font-weight:500;color:var(--tx);margin-top:3px}
+.tt{display:flex;gap:4px}
+.tab{padding:3px 9px;border-radius:var(--rs);border:1px solid transparent;background:transparent;color:var(--t3);cursor:pointer;font-family:var(--mo);font-size:10px;letter-spacing:.05em;transition:all .12s}
+.tab:hover{color:var(--t2)}
+.tab.active{background:var(--ord);border-color:rgba(247,147,26,.4);color:var(--or)}
+.tab-te.active{background:var(--ted);border-color:rgba(0,196,160,.4);color:var(--te)}
+.cw{position:relative;width:100%}
+.leg{display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--t2)}
+.ll{display:inline-block;width:18px;height:2px;border-radius:1px;margin-right:5px;vertical-align:middle}
+
+/* YIELD INFO CARD */
+.ai{background:var(--card);border:1px solid var(--cb);border-radius:var(--r);padding:16px 18px}
+.ai-title{font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+.ar{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:12px}
+.ar:last-child{border-bottom:none;padding-top:9px}
+.ak{color:var(--t2)}.av{font-family:var(--mo);color:var(--tx)}
+.atot-or{font-size:15px;font-weight:500;color:var(--or)}
+.atot-te{font-size:15px;font-weight:500;color:var(--te)}
+.tvlm{background:var(--card);border:1px solid var(--cb);border-radius:var(--r);padding:16px 18px}
+
+/* POSITIONS TABLE */
+.pc{background:var(--card);border:1px solid var(--cb);border-radius:var(--r);overflow:hidden;animation:fu .5s ease .18s both;margin-bottom:18px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;border-bottom:1px solid var(--cb)}
+.ptitle{font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:8px 22px;font-size:10px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;font-weight:400;border-bottom:1px solid var(--cb)}
+td{padding:11px 22px;border-bottom:1px solid rgba(255,255,255,.028);font-size:12px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.018)}
+.tc{display:flex;align-items:center;gap:9px}
+.ti{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.tn{font-weight:500;color:var(--tx);font-size:12px}
+.td2{font-size:10px;color:var(--t3);margin-top:1px}
+.badge{display:inline-block;padding:2px 7px;border-radius:100px;font-size:10px}
+.bo{background:var(--ord);color:var(--or);border:1px solid rgba(247,147,26,.3)}
+.bb{background:var(--bld);color:var(--bl);border:1px solid rgba(74,158,255,.3)}
+.bt{background:var(--ted);color:var(--te);border:1px solid rgba(0,196,160,.3)}
+.bg{background:var(--god);color:var(--go);border:1px solid rgba(255,209,102,.3)}
+.bp2{background:var(--pud);color:var(--pu);border:1px solid rgba(167,139,250,.3)}
+
+/* INFO GRID */
+.ig3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px}
+@media(max-width:860px){.ig3{grid-template-columns:1fr}}
+.icard{background:var(--card);border:1px solid var(--cb);border-radius:var(--r);padding:15px 18px;animation:fu .5s ease .28s both}
+.ititle{font-size:10px;color:var(--t3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
+.ir{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.028);font-size:12px}
+.ir:last-child{border-bottom:none}
+.ik{color:var(--t2)}.iv{color:var(--tx);text-align:right}
+.iv a{color:var(--or);text-decoration:none}.iv a:hover{text-decoration:underline}
+.iv a.te-link{color:var(--te)}.iv a.te-link:hover{text-decoration:underline}
+
+/* ALERT CARD */
+.acard{background:var(--card);border:1px solid var(--cb);border-radius:var(--r);padding:16px 18px;margin-bottom:18px}
+.acard-te{border-color:rgba(0,196,160,.18)}
+
+/* PAYOUT TABLE */
+.pt-wrap{overflow-x:auto;max-height:400px;overflow-y:auto}
+.pt-wrap::-webkit-scrollbar{width:4px;height:4px}
+.pt-wrap::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
+.new-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:9px;background:var(--ted);color:var(--te);border:1px solid rgba(0,196,160,.3);margin-left:6px;vertical-align:middle}
+.compound-badge{display:inline-block;padding:1px 5px;border-radius:3px;font-size:8px;background:var(--ord);color:var(--or);border:1px solid rgba(247,147,26,.3);margin-left:6px;vertical-align:middle;letter-spacing:0.05em}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.72);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:26px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-t{font-size:14px;font-weight:500;margin-bottom:5px}
+.modal-s{font-size:12px;color:var(--t2);margin-bottom:20px}
+.fg{margin-bottom:13px}
+.fl{font-size:11px;color:var(--t2);margin-bottom:5px;display:block;letter-spacing:.05em}
+.inp{width:100%;padding:9px 13px;background:var(--bg3);border:1px solid rgba(255,255,255,.08);border-radius:var(--rs);color:var(--tx);font-family:var(--mo);font-size:12px;outline:none;transition:border-color .15s}
+.inp:focus{border-color:var(--or)}
+.inp::placeholder{color:var(--t3)}
+.fn{font-size:10px;color:var(--t3);margin-top:4px;line-height:1.6}
+.ma{display:flex;gap:10px;margin-top:10px;justify-content:flex-end}
+.tcr{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.rmt{width:26px;height:26px;border-radius:5px;background:var(--red);border:1px solid rgba(255,82,82,.3);color:var(--re);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+
+/* TOGGLE */
+.tog{position:relative;width:36px;height:20px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.ts2{position:absolute;inset:0;background:var(--bg3);border-radius:100px;cursor:pointer;border:1px solid var(--cb);transition:.2s}
+.ts2::before{content:'';position:absolute;width:14px;height:14px;left:2px;top:2px;background:var(--t3);border-radius:50%;transition:.2s}
+.tog input:checked+.ts2{background:var(--ted);border-color:var(--te)}
+.tog input:checked+.ts2::before{transform:translateX(16px);background:var(--te)}
+.tog.or-tog input:checked+.ts2{background:var(--ord);border-color:var(--or)}
+.tog.or-tog input:checked+.ts2::before{background:var(--or)}
+
+/* TOAST */
+.tcs{position:fixed;bottom:22px;right:22px;z-index:300;display:flex;flex-direction:column;gap:7px}
+.tst{padding:11px 16px;border-radius:var(--rs);background:var(--bg2);border:1px solid rgba(255,255,255,.1);font-size:12px;max-width:320px;animation:ti .2s ease;display:flex;align-items:center;gap:9px}
+.tst.success{border-color:rgba(0,196,160,.4)}.tst.error{border-color:rgba(255,82,82,.4)}
+@keyframes ti{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+
+footer{border-top:1px solid var(--cb);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--t3);flex-wrap:wrap;gap:8px}
+footer a{color:var(--or);text-decoration:none}footer a:hover{text-decoration:underline}
+.empty{padding:32px 22px;text-align:center;color:var(--t2);font-size:12px}
+.skel{background:linear-gradient(90deg,var(--bg3) 25%,rgba(255,255,255,.05) 50%,var(--bg3) 75%);background-size:200% 100%;animation:sh 1.4s infinite;border-radius:4px;display:inline-block}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.spin{animation:rs .8s linear infinite;display:inline-block}@keyframes rs{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+@media(max-width:680px){main{padding:14px 16px}.tab-bar{padding:0 14px}.nav-top{padding:0 16px}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<nav>
+  <div class="nav-top">
+    <div class="nb">
+      <div class="nl nl-port">P</div>
+      <div><div class="nt">Portfolio Dashboard</div><div class="ns">LBTC Vault &amp; TCY Staker</div></div>
+    </div>
+    <div class="nr">
+      <div class="live"><div class="ld"></div>live</div>
+      <span id="clock">--:--:--</span>
+      <button class="btn" id="refresh-btn" onclick="refreshAll()">↻ refresh</button>
+      <button class="btn bto" onclick="openSettings()">⚙ settings</button>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <button class="ptab active" data-tab="portfolio" onclick="switchTab('portfolio',this)"><span class="tab-dot dot-both"></span>portfolio</button>
+    <button class="ptab" data-tab="lombard" onclick="switchTab('lombard',this)"><span class="tab-dot dot-or"></span>lbtc vault</button>
+    <button class="ptab" data-tab="tcy" onclick="switchTab('tcy',this)"><span class="tab-dot dot-te"></span>tcy staker</button>
+  </div>
+</nav>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════
+     TAB 1 — PORTFOLIO OVERVIEW
+═══════════════════════════════════════════════════ -->
+<div id="tab-portfolio" class="tab-section active">
+
+  <div class="hero-row">
+    <div class="hero-card primary-both">
+      <div class="hero-lbl"><span style="width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--or),var(--te));display:inline-block"></span>total principal value</div>
+      <div class="hero-usd pu" id="port-total"><span class="skel" style="height:34px;width:160px"></span></div>
+      <div class="hero-btc" id="port-btc-line"><span class="skel" style="height:14px;width:200px"></span></div>
+      <div class="hero-sub" id="port-sub"></div>
+    </div>
+    <div class="hero-card primary-or" style="animation-delay:.07s">
+      <div class="hero-lbl"><span style="width:8px;height:8px;border-radius:50%;background:var(--or);display:inline-block"></span>lbtc vault · base chain</div>
+      <div class="hero-usd or" id="port-lbtc-usd"><span class="skel" style="height:28px;width:120px"></span></div>
+      <div class="hero-sub" id="port-lbtc-sub" style="margin-top:4px">BTCe vault position</div>
+    </div>
+    <div class="hero-card primary-te" style="animation-delay:.12s">
+      <div class="hero-lbl"><span style="width:8px;height:8px;border-radius:50%;background:var(--te);display:inline-block"></span>tcy staker · thorchain</div>
+      <div class="hero-usd te" id="port-tcy-usd"><span class="skel" style="height:28px;width:120px"></span></div>
+      <div class="hero-sub" id="port-tcy-sub" style="margin-top:4px">0 TCY staked</div>
+    </div>
+  </div>
+
+  <div class="m4" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+    <div class="mc4"><div class="ml">bitcoin price</div><div class="mv" id="p-btc">—</div><div class="mc nt2" id="p-btc-ch">—</div></div>
+    <div class="mc4"><div class="ml">rune price</div><div class="mv" id="p-rune">—</div><div class="mc nt2" id="p-rune-ch">—</div></div>
+    <div class="mc4"><div class="ml">tcy price</div><div class="mv" id="p-tcy">$0.0000</div><div class="mc nt2" id="p-tcy-ch">+0.00% 24h</div></div>
+    <div class="mc4"><div class="ml">tcy position usd</div><div class="mv" id="p-tcy-pos">—</div><div class="mc nt2" id="p-tcy-pos-sub">0 TCY</div></div>
+    <div class="mc4"><div class="ml">tcy yield earned</div><div class="mv" id="p-tcy-yield">$0.00</div><div class="mc up">total all-time</div></div>
+    <div class="mc4"><div class="ml">lbtc vault apy</div><div class="mv" id="p-lbtc-apy">3.97%</div><div class="mc nt2">Bitcoin Earn Vault</div></div>
+  </div>
+
+  <div class="sec">allocation</div>
+  <div style="display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:18px">
+    <div class="cc">
+      <div class="ch2">
+        <div><div class="ct">portfolio allocation</div><div class="cs" id="port-alloc-title">by active principal value</div></div>
+      </div>
+      <div class="cw" style="height:220px"><canvas id="portDonut" role="img" aria-label="Donut chart of portfolio allocation between LBTC vault and TCY staker">Portfolio allocation split.</canvas></div>
+    </div>
+    <div class="cc">
+      <div class="ch2"><div><div class="ct">key metrics comparison</div></div></div>
+      <div style="font-size:12px">
+        <div class="ar" style="padding:10px 0"><span class="ak">LBTC vault position</span><span class="av" id="cmp-lbtc" style="color:var(--or)">—</span></div>
+        <div class="ar" style="padding:10px 0"><span class="ak" id="cmp-tcy-lbl">TCY staked (0)</span><span class="av" id="cmp-tcy" style="color:var(--te)">—</span></div>
+        <div class="ar" style="padding:10px 0"><span class="ak">LBTC vault APY</span><span class="av" style="color:var(--or)" id="cmp-apy">3.97%</span></div>
+        <div class="ar" style="padding:10px 0"><span class="ak">TCY est. APY (30d ann.)</span><span class="av" style="color:var(--te)" id="cmp-tcy-apy">—</span></div>
+        <div class="ar" style="padding:10px 0"><span class="ak" style="font-weight:500;color:var(--tx)">total principal value</span><span class="av" id="cmp-total" style="color:var(--pu);font-size:15px">—</span></div>
+        <div class="ar" style="padding:10px 0;border-bottom:none"><span class="ak" style="color:var(--t2)">+ TCY all-time yield</span><span class="av" style="color:var(--te)" id="cmp-yield">$0.00</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">recent portfolio distributions <span style="font-size:9px;color:var(--t3);letter-spacing:0;text-transform:none">— merged yields</span></div>
+  <div class="pc" style="margin-bottom:18px">
+    <div class="ph">
+      <div class="ptitle">RUNE Drops + BTCe Compounding Events</div>
+      <span class="new-badge" id="port-payout-count">loading…</span>
+    </div>
+    <table>
+      <thead><tr><th>date</th><th>asset generated</th><th>price at time</th><th>usd value</th></tr></thead>
+      <tbody id="port-payout-preview"></tbody>
+    </table>
+  </div>
+
+  <!-- ALERTS -->
+  <div class="sec">global alerts</div>
+  <div class="acard" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:0">
+    <div>
+      <div style="font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">Telegram</div>
+      <div class="fg"><label class="fl">bot token</label><input class="inp" type="password" id="tg-tok" placeholder="bot123456:ABC-DEF..." onchange="saveAlertSettings()"></div>
+      <div class="fg"><label class="fl">chat ID</label><input class="inp" id="tg-chat" placeholder="-1001234567890" onchange="saveAlertSettings()"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:12px;color:var(--t2)">alert on new RUNE payout</span>
+        <label class="tog"><input type="checkbox" id="tg-tcy-tg" checked onchange="saveAlertSettings()"><span class="ts2"></span></label>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+        <span style="font-size:12px;color:var(--t2)">alert on BTCe compounding</span>
+        <label class="tog"><input type="checkbox" id="tg-btce-tg" checked onchange="saveAlertSettings()"><span class="ts2"></span></label>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">Webhook / Email</div>
+      <div class="fg"><label class="fl">webhook URL</label><input class="inp" id="wh-url" placeholder="https://hooks.example.com/..."></div>
+      <div class="fg"><label class="fl">min payout threshold (RUNE)</label><input class="inp" type="number" id="wh-min" value="1" style="max-width:120px;"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn" style="background:var(--ord);color:var(--or);border-color:rgba(247,147,26,.3)" onclick="fireTcyAlert('telegram')">send test alert</button>
+        <button class="btn" style="background:var(--ted);color:var(--te);border-color:rgba(0,196,160,.3)" onclick="fireTcyAlert('webhook')">fire webhook</button>
+        <button class="btn" onclick="fireTcyAlert('log')">view payload</button>
+      </div>
+    </div>
+  </div>
+  <div id="wlog" style="display:none;margin-top:18px" class="acard" >
+    <div style="font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">last webhook payload</div>
+    <pre id="wlog-pre" style="font-size:11px;color:var(--t3);font-family:var(--mo);white-space:pre-wrap;line-height:1.7"></pre>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TAB 2 — LBTC VAULT
+═══════════════════════════════════════════════════════════ -->
+<div id="tab-lombard" class="tab-section">
+
+  <div class="wb-row" id="wb"></div>
+
+  <div class="hero-row">
+    <div class="hero-card primary-or">
+      <div class="hero-lbl"><span style="width:8px;height:8px;border-radius:50%;background:var(--or);display:inline-block"></span>wallet usd value · btce vault position</div>
+      <div class="hero-usd or" id="hero-usd"><span class="skel" style="height:34px;width:160px"></span></div>
+      <div class="hero-btc" id="hero-btc"><span class="skel" style="height:14px;width:130px"></span></div>
+      <div class="hero-sub" id="hero-sub"></div>
+    </div>
+    <div class="msm">
+      <div class="ml">bitcoin price</div>
+      <div class="mv" id="mc-btc"><span class="skel" style="height:22px;width:110px"></span></div>
+      <div class="mc nt2" id="mc-btc-ch"></div>
+    </div>
+    <div class="msm">
+      <div class="ml">eth price · wallet eth</div>
+      <div class="mv" id="mc-eth-p"><span class="skel" style="height:22px;width:100px"></span></div>
+      <div class="mc nt2" id="mc-eth-bal">wallet: —</div>
+    </div>
+  </div>
+
+  <div class="m4">
+    <div class="mc4"><div class="ml">BTCe→BTC rate</div><div class="mv" id="mc-rate"><span class="skel" style="height:22px;width:110px"></span></div><div class="mc nt2">1 BTCe = x BTC</div></div>
+    <div class="mc4"><div class="ml">vault APY (live)</div><div class="mv" id="mc-apy"><span class="skel" style="height:22px;width:80px"></span></div><div class="mc nt2" id="mc-apy-ch"></div></div>
+    <div class="mc4"><div class="ml">vault TVL</div><div class="mv" id="mc-tvl"><span class="skel" style="height:22px;width:100px"></span></div><div class="mc nt2" id="mc-tvl-ch"></div></div>
+    <div class="mc4"><div class="ml">ETH wallet value</div><div class="mv" id="mc-eth-usd"><span class="skel" style="height:22px;width:90px"></span></div><div class="mc nt2" id="mc-eth-usd-sub">native gas</div></div>
+  </div>
+
+  <div class="sec">performance</div>
+  <div class="cg">
+    <div class="cc">
+      <div class="ch2">
+        <div><div class="ct">APY — historical &amp; projected</div><div class="cs" id="apy-stat"><span class="skel" style="height:16px;width:90px"></span></div></div>
+        <div class="tt">
+          <button class="tab active" onclick="setApyRange(30,this)">30d</button>
+          <button class="tab" onclick="setApyRange(90,this)">90d</button>
+          <button class="tab" onclick="setApyRange(180,this)">180d</button>
+        </div>
+      </div>
+      <div class="cw" style="height:200px"><canvas id="apyChart" role="img" aria-label="APY chart for LBTC vault"></canvas></div>
+      <div class="leg"><span><span class="ll" style="background:#F7931A"></span>historical</span><span><span class="ll" style="background:#00C4A0"></span>projected</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="ai">
+        <div class="ai-title">yield sources — bitcoin earn vault</div>
+        <div class="ar"><span class="ak">strategy APY</span><span class="av">0.61%</span></div>
+        <div class="ar"><span class="ak">LBTC APY (Babylon staking)</span><span class="av">0.38%</span></div>
+        <div class="ar"><span class="ak">$BARD APY (season incentives)</span><span class="av">2.98% <span style="font-size:10px;color:var(--t3)">(airdrop)</span></span></div>
+        <div class="ar"><span class="ak" style="font-weight:500">total APY</span><span class="atot-or" id="ay-total">3.97%</span></div>
+        <div style="margin-top:10px;font-size:10px;color:var(--t3);line-height:1.7">Strategy + LBTC APY compounds live into the BTCe share price. $BARD rewards are airdropped at season end.</div>
+      </div>
+      <div class="tvlm">
+        <div style="font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">vault tvl — 90d</div>
+        <div style="font-size:20px;font-weight:500;font-family:var(--mo);color:var(--tx);margin-bottom:3px" id="tvl-val">—</div>
+        <div style="font-size:11px;margin-bottom:12px" id="tvl-ch">—</div>
+        <div class="cw" style="height:75px"><canvas id="tvlChart" role="img" aria-label="TVL sparkline"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">wallet positions · base chain</div>
+  <div class="pc">
+    <div class="ph">
+      <div class="ptitle">token balances</div>
+      <div id="w-addr" style="font-size:11px;color:var(--t2);font-family:var(--mo)"></div>
+    </div>
+    <div id="pos-body"><div class="empty"><span class="skel" style="height:13px;width:200px"></span></div></div>
+  </div>
+
+  <div class="sec">contract diagnostics <span style="font-size:9px;color:var(--t3);letter-spacing:0;text-transform:none">— background probe of BTCe vault</span></div>
+  <div id="diag-panel" style="background:var(--card);border:1px solid var(--cb);border-radius:var(--r);padding:16px 20px;margin-bottom:18px;font-family:var(--mo);font-size:11px">
+    <div style="color:var(--t3)">Probing contract in background…</div>
+  </div>
+
+  <div class="sec">protocol</div>
+  <div class="ig3">
+    <div class="icard">
+      <div class="ititle">vault details</div>
+      <div class="ir"><span class="ik">product</span><span class="iv">Bitcoin Earn Vault</span></div>
+      <div class="ir"><span class="ik">chain</span><span class="iv">Base (EVM)</span></div>
+      <div class="ir"><span class="ik">receipt token</span><span class="iv">BTCe (ERC-4626)</span></div>
+      <div class="ir"><span class="ik">manager</span><span class="iv">Sentora / Veda</span></div>
+    </div>
+    <div class="icard">
+      <div class="ititle">yield sources</div>
+      <div class="ir"><span class="ik">Aave / Morpho / Spark</span><span class="iv"><span class="badge bt">lending</span></span></div>
+      <div class="ir"><span class="ik">Babylon staking</span><span class="iv"><span class="badge bo">LBTC APY</span></span></div>
+      <div class="ir"><span class="ik">$BARD incentives</span><span class="iv"><span class="badge bg">airdrop</span></span></div>
+      <div class="ir"><span class="ik">target returns</span><span class="iv">3–5% BTC APY</span></div>
+    </div>
+    <div class="icard">
+      <div class="ititle">links</div>
+      <div class="ir"><span class="ik">earn vault</span><span class="iv"><a href="https://www.lombard.finance/app/earn/" target="_blank">lombard.finance ↗</a></span></div>
+      <div class="ir"><span class="ik">rewards</span><span class="iv"><a href="https://www.lombard.finance/app/rewards/" target="_blank">view rewards ↗</a></span></div>
+      <div class="ir"><span class="ik">Basescan explorer</span><span class="iv"><a href="https://basescan.org/" target="_blank">on-chain ↗</a></span></div>
+      <div class="ir"><span class="ik">BTCe contract</span><span class="iv"><a href="https://basescan.org/address/0x3a4baaBf4DC9910596821615e848f0e6545762F3" target="_blank">basescan ↗</a></span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TAB 3 — TCY STAKER
+═══════════════════════════════════════════════════════════ -->
+<div id="tab-tcy" class="tab-section">
+
+  <div class="hero-row">
+    <div class="hero-card primary-te">
+      <div class="hero-lbl"><span style="width:8px;height:8px;border-radius:50%;background:var(--te);display:inline-block"></span>staked tcy · usd value</div>
+      <div class="hero-usd te" id="tcy-hero-usd">$0.00</div>
+      <div class="hero-btc" id="tcy-hero-staked">0 TCY staked</div>
+      <div class="hero-sub" id="tcy-hero-sub">TCY @ $0.0000 · RUNE @ $0.0000</div>
+    </div>
+    <div class="msm">
+      <div class="ml">TCY price</div>
+      <div class="mv" id="tcy-price-disp">$0.0000</div>
+      <div class="mc" id="tcy-ch-disp"><span class="up">+0.00% 24h</span></div>
+    </div>
+    <div class="msm">
+      <div class="ml">RUNE price</div>
+      <div class="mv" id="rune-price-disp">$0.0000</div>
+      <div class="mc" id="rune-ch-disp"><span class="dn">-0.00% 24h</span></div>
+    </div>
+  </div>
+
+  <div class="m4">
+    <div class="mc4"><div class="ml">staked TCY</div><div class="mv" id="tcy-staked-metric">0</div><div class="mc up" id="tcy-staked-usd">$0.00 USD</div></div>
+    <div class="mc4"><div class="ml">total RUNE earned</div><div class="mv" id="tcy-total-rune">—</div><div class="mc up" id="tcy-total-rune-usd">—</div></div>
+    <div class="mc4"><div class="ml">total USD earned</div><div class="mv" id="tcy-total-usd-earned">—</div><div class="mc nt2" id="tcy-payout-count">— payouts</div></div>
+    <div class="mc4"><div class="ml">est. APY (30d ann.)</div><div class="mv" id="tcy-est-apy">—</div><div class="mc nt2">annualized yield</div></div>
+  </div>
+
+  <div class="sec">yield performance</div>
+  <div class="cg">
+    <div class="cc">
+      <div class="ch2">
+        <div><div class="ct">cumulative USD yield — all time</div><div class="cs" id="tcy-cum-total">awaiting data</div></div>
+        <div><span style="font-size:10px;padding:3px 9px;border-radius:var(--rs);background:var(--ted);color:var(--te);border:1px solid rgba(0,196,160,.3)">CSV data</span></div>
+      </div>
+      <div class="cw" style="height:200px"><canvas id="tcyCumChart" role="img" aria-label="Cumulative USD yield from TCY staking">Cumulative yield chart.</canvas></div>
+      <div class="leg"><span><span class="ll" style="background:#00C4A0"></span>cumulative USD yield</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="ai">
+        <div class="ai-title">tcy position summary</div>
+        <div class="ar"><span class="ak">staked TCY</span><span class="av" id="tcy-pos-sum-staked">0</span></div>
+        <div class="ar"><span class="ak">position USD (live)</span><span class="av" id="tcy-pos-usd-sum">$0.00</span></div>
+        <div class="ar"><span class="ak">total RUNE earned</span><span class="av" id="tcy-rune-sum">—</span></div>
+        <div class="ar"><span class="ak">tracking since</span><span class="av" id="tcy-track-since">—</span></div>
+        <div class="ar"><span class="ak" style="font-weight:500">total USD earned</span><span class="atot-te" id="tcy-usd-sum">—</span></div>
+        <div style="margin-top:10px;font-size:10px;color:var(--t3);line-height:1.7">10% of all THORChain revenue distributed to staked TCY holders in RUNE, daily.</div>
+      </div>
+      <div class="tvlm">
+        <div style="font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">daily RUNE payout (USD) — 30d</div>
+        <div style="font-size:20px;font-weight:500;font-family:var(--mo);color:var(--tx);margin-bottom:3px" id="tcy-30d-total">—</div>
+        <div style="font-size:11px;margin-bottom:12px" id="tcy-30d-sub" class="up">—</div>
+        <div class="cw" style="height:75px"><canvas id="tcySparkChart" role="img" aria-label="30-day daily RUNE payout sparkline"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cg">
+    <div class="cc">
+      <div class="ch2">
+        <div><div class="ct">daily RUNE payout in USD</div><div class="cs" id="tcy-30d-sub2">last 30 days</div></div>
+        <div class="tt">
+          <button class="tab tab-te active" onclick="setTcyRange(30,this)">30d</button>
+          <button class="tab tab-te" onclick="setTcyRange(90,this)">90d</button>
+          <button class="tab tab-te" onclick="setTcyRange(179,this)">all</button>
+        </div>
+      </div>
+      <div class="cw" style="height:190px"><canvas id="tcyBarChart" role="img" aria-label="Bar chart of daily RUNE payout in USD">Daily payout chart.</canvas></div>
+    </div>
+    <div class="cc">
+      <div class="ch2"><div><div class="ct">monthly RUNE earned (USD)</div></div></div>
+      <div class="cw" style="height:190px"><canvas id="tcyMonthChart" role="img" aria-label="Monthly RUNE earned in USD bar chart">Monthly RUNE earnings.</canvas></div>
+    </div>
+  </div>
+
+  <div class="sec">payout history <span style="font-size:9px;color:var(--t3);letter-spacing:0;text-transform:none">— on-chain distributions</span></div>
+  <div class="pc">
+    <div class="ph">
+      <div class="ptitle">RUNE distributions <span class="new-badge" id="tcy-live-badge">0</span></div>
+      <div style="font-size:11px;color:var(--t2);font-family:var(--mo)" id="tcy-addr-disp1">Not configured</div>
+    </div>
+    <div class="pt-wrap">
+      <table>
+        <thead><tr><th>date</th><th>rune amount</th><th>rune price</th><th>usd value</th></tr></thead>
+        <tbody id="tcy-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="sec">protocol</div>
+  <div class="ig3">
+    <div class="icard">
+      <div class="ititle">tcy details</div>
+      <div class="ir"><span class="ik">token</span><span class="iv">THOR.TCY</span></div>
+      <div class="ir"><span class="ik">chain</span><span class="iv">THORChain</span></div>
+      <div class="ir"><span class="ik">total supply</span><span class="iv">210M TCY</span></div>
+      <div class="ir"><span class="ik">yield source</span><span class="iv">10% of TCY revenue</span></div>
+      <div class="ir"><span class="ik">payout token</span><span class="iv">RUNE</span></div>
+    </div>
+    <div class="icard">
+      <div class="ititle">wallet</div>
+      <div class="ir"><span class="ik">address</span><span class="iv" style="font-size:10px;word-break:break-all" id="tcy-addr-disp2">Not configured</span></div>
+      <div class="ir"><span class="ik">staked</span><span class="iv" id="tcy-staked-disp3">0 TCY</span></div>
+      <div class="ir"><span class="ik">tracking since</span><span class="iv" id="tcy-track-since2">—</span></div>
+      <div class="ir"><span class="ik">payouts</span><span class="iv" id="tcy-payouts-disp4">0</span></div>
+    </div>
+    <div class="icard">
+      <div class="ititle">links</div>
+      <div class="ir"><span class="ik">rune.tools</span><span class="iv"><a href="#" id="rune-tools-link" target="_blank" class="te-link">view dashboard ↗</a></span></div>
+      <div class="ir"><span class="ik">runescan</span><span class="iv"><a href="https://runescan.io/pool/THOR.TCY" target="_blank" class="te-link">pool info ↗</a></span></div>
+      <div class="ir"><span class="ik">CMC price</span><span class="iv"><a href="https://coinmarketcap.com/currencies/thorchain-yield/" target="_blank" class="te-link">TCY/USD ↗</a></span></div>
+      <div class="ir"><span class="ik">THORChain docs</span><span class="iv"><a href="https://docs.thorchain.org" target="_blank" class="te-link">docs ↗</a></span></div>
+    </div>
+  </div>
+
+</div><!-- /tab-tcy -->
+
+</main>
+
+<footer>
+  <div>Portfolio Dashboard · LBTC Vault (Base chain) + TCY Staker (THORChain) · data: DefiLlama, CoinGecko, Base RPC, DexScreener</div>
+  <div id="last-upd" style="color:var(--t3)">never synced</div>
+</footer>
+
+<!-- ADD WALLET MODAL -->
+<div class="overlay" id="add-w-modal">
+  <div class="modal">
+    <div class="modal-t">add EVM wallet</div>
+    <div class="modal-s">Track any Base chain wallet for Lombard</div>
+    <div class="fg"><label class="fl">address (0x…)</label><input class="inp" id="nwa" placeholder="0xB834…" maxlength="42"></div>
+    <div class="fg"><label class="fl">label (optional)</label><input class="inp" id="nwl" placeholder="my vault wallet"></div>
+    <div class="ma"><button class="btn" onclick="closeModal('add-w-modal')">cancel</button><button class="btn bto" onclick="addWallet()">add</button></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="settings-modal">
+  <div class="modal">
+    <div class="modal-t">settings & privacy</div>
+    <div class="modal-s">All wallet data is stored locally on your device.</div>
+    
+    <div style="font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin:12px 0 6px">Thorchain TCY Settings</div>
+    <div class="fg"><label class="fl">Thorchain Address</label><input class="inp" id="tcy-addr-inp" placeholder="thor1..."></div>
+    <div class="fg"><label class="fl">Staked TCY Balance</label><input class="inp" type="number" id="tcy-staked-inp" placeholder="0.00"></div>
+
+    <div style="font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin:18px 0 6px">Base Chain Settings (Lombard)</div>
+    <div class="fg">
+      <label class="fl">Base chain RPC URL</label>
+      <input class="inp" id="rpc-inp" value="https://base.llamarpc.com">
+    </div>
+    <div class="fg">
+      <label class="fl">tracked tokens · sym / contract / decimals</label>
+      <div id="tok-cfg"></div>
+      <button class="btn" style="margin-top:8px;width:100%" onclick="addTokRow()">+ add base token</button>
+    </div>
+    
+    <div class="ma" style="margin-top:24px"><button class="btn" onclick="closeModal('settings-modal')">cancel</button><button class="btn bto" onclick="saveSettings()">save &amp; refresh</button></div>
+  </div>
+</div>
+
+<div class="tcs" id="tcs"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  LOMBARD CONSTANTS + STATE
+// ═══════════════════════════════════════════════════════════
+const STORE = 'megadash1';
+const BASE_RPCS = ['https://base.llamarpc.com','https://rpc.ankr.com/base','https://mainnet.base.org','https://base-rpc.publicnode.com','https://base.drpc.org'];
+const BTC_SYMS  = new Set(['BTCE','LBTC','CBBTC','WBTC','BTCB','TBTC']);
+const STBL_SYMS = new Set(['USDC','USDBC','USDT','DAI','LUSD','FRAX']);
+const IC = {BTCe:['#F7931A','#000'],LBTC:['#F7931A','#000'],cbBTC:['#0052FF','#fff'],WBTC:['#F09242','#fff'],USDC:['#2775CA','#fff'],ETH:['#627EEA','#fff']};
+
+// BLANK BY DEFAULT FOR PRIVACY
+const DEF_WALLETS = [];
+const DEF_TOKENS = [
+  {sym:'BTCe',addr:'0x3a4baaBf4DC9910596821615e848f0e6545762F3',dec:8,v4626:true},
+  {sym:'cbBTC',addr:'0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',dec:8},
+  {sym:'WBTC',addr:'0x0555E30da8f98308EdB960aa94C0Db47230d2B9c',dec:8},
+  {sym:'LBTC',addr:'0xecAc9C5F704e954931349Da37F60E39f515c11c1',dec:8},
+  {sym:'USDC',addr:'0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',dec:6},
+];
+const WBTC_BASE='0x0555E30da8f98308EdB960aa94C0Db47230d2B9c';
+const CBBTC_BASE='0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf';
+const LBTC_BASE='0xecAc9C5F704e954931349Da37F60E39f515c11c1';
+
+let S={
+  wallets: JP(ls(`${STORE}_w`)) || DEF_WALLETS,
+  tokens: JP(ls(`${STORE}_t`)) || DEF_TOKENS,
+  rpcUrl: ls(`${STORE}_r`) || 'https://base.llamarpc.com',
+  alerts: JP(ls(`${STORE}_a`)) || {},
+  
+  // TCY Private Local Variables
+  tcyAddr: ls(`${STORE}_tcy_addr`) || '',
+  tcyStaked: parseFloat(ls(`${STORE}_tcy_stkd`)) || 0,
+  
+  // BLANK BY DEFAULT FOR PRIVACY
+  tcyCsv: JP(ls(`${STORE}_tcy_csv`)) || [],
+  btceYields: JP(ls(`${STORE}_by`)) || [],
+  
+  aw: 0, btcP: 0, ethP: 0, jpyRate: 150,
+  tvlData: [], apyData: [], apyPid: null, apyRange: 30,
+  apyChart: null, tvlChart: null,
+  prevUsd: 0, prevRate: 0, prevBtcEq: 0,
+  lbtcUsd: 0,
+};
+
+let _accountantAddr=null;
+const charts={};
+let tcyPrice = 0, runePrice = 0;
+let TCY_TOTAL_RUNE = 0, TCY_TOTAL_USD = 0;
+
+// ═══════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════
+function JP(s){try{return s?JSON.parse(s):null}catch{return null}}
+function ls(k,v){if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}
+function fU(n){if(n==null||isNaN(n))return'—';if(n>=1e9)return'$'+(n/1e9).toFixed(3)+'B';if(n>=1e6)return'$'+(n/1e6).toFixed(3)+'M';if(n>=1e3)return'$'+n.toLocaleString('en-US',{maximumFractionDigits:0});return'$'+n.toFixed(2);}
+function f(n,d=2){return(n==null||isNaN(n))?'—':n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fA(a){return a?a.slice(0,6)+'…'+a.slice(-4):'—'}
+function fmtJPY(usd){if(!S.jpyRate||!usd)return'';const j=usd*S.jpyRate;if(j>=1e8)return'¥'+Math.round(j/1e4).toLocaleString()+'万';return'¥'+Math.round(j).toLocaleString();}
+function fmt(n,d=2){return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+
+function toast(msg,type='info'){
+  const c=document.getElementById('tcs'),el=document.createElement('div');
+  const col={success:'var(--te)',error:'var(--re)',info:'var(--t2)'};
+  el.className=`tst ${type}`;el.innerHTML=`<span style="color:${col[type]||col.info}">●</span>${msg}`;
+  c.appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300)},3800);
+}
+setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{hour12:false}),1000);
+document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
+
+// ═══════════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════════════════
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODAL + WALLET BAR
+// ═══════════════════════════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')}));
+
+function renderWB(){
+  const b=document.getElementById('wb');
+  if (S.wallets.length === 0) {
+      b.innerHTML = `<button class="addw" onclick="openModal('add-w-modal')" style="border-color:var(--or);color:var(--or)">+ Setup EVM Wallet</button>`;
+      document.getElementById('w-addr').textContent = 'Not configured';
+      return;
+  }
+  b.innerHTML=S.wallets.map((w,i)=>`
+    <div class="wc ${i===S.aw?'active':''}" onclick="swW(${i})">
+      <div class="wd"></div><span>${w.label||fA(w.addr)}</span>
+      <span style="opacity:.55;font-size:10px">${fA(w.addr)}</span>
+      <div class="wr" onclick="event.stopPropagation();rmW(${i})">×</div>
+    </div>`).join('')+`<button class="addw" onclick="openModal('add-w-modal')">+ add wallet</button>`;
+  document.getElementById('w-addr').textContent=S.wallets[S.aw]?.addr||'';
+}
+function swW(i){S.aw=i;renderWB();loadWallet();}
+function rmW(i){S.wallets.splice(i,1);if(S.aw>=S.wallets.length)S.aw=0;ls(`${STORE}_w`,JSON.stringify(S.wallets));renderWB();loadWallet();}
+function addWallet(){
+  const a=document.getElementById('nwa').value.trim(),l=document.getElementById('nwl').value.trim();
+  if(!/^0x[0-9a-fA-F]{40}$/.test(a)){toast('Invalid address','error');return;}
+  if(S.wallets.find(w=>w.addr.toLowerCase()===a.toLowerCase())){toast('Already tracked','error');return;}
+  S.wallets.push({addr:a,label:l||fA(a)});ls(`${STORE}_w`,JSON.stringify(S.wallets));
+  closeModal('add-w-modal');renderWB();toast('Wallet added','success');refreshAll();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════
+function openSettings(){
+  document.getElementById('rpc-inp').value=S.rpcUrl;
+  document.getElementById('tcy-addr-inp').value = S.tcyAddr || '';
+  document.getElementById('tcy-staked-inp').value = S.tcyStaked || '';
+  renderTR(document.getElementById('tok-cfg'));
+  openModal('settings-modal');
+}
+function renderTR(c){c.innerHTML=S.tokens.map((t,i)=>`<div class="tcr"><input class="inp" style="width:60px;flex:0 0 60px" placeholder="SYM" value="${t.sym}" id="ts${i}"><input class="inp" placeholder="0x…" value="${t.addr}" id="ta${i}"><input class="inp" style="width:44px;flex:0 0 44px" placeholder="dec" value="${t.dec}" id="td${i}"><button class="rmt" onclick="rmTok(${i})">×</button></div>`).join('');}
+function addTokRow(){S.tokens.push({sym:'',addr:'',dec:8});renderTR(document.getElementById('tok-cfg'));}
+function rmTok(i){S.tokens.splice(i,1);renderTR(document.getElementById('tok-cfg'));}
+function saveSettings(){
+  S.rpcUrl=document.getElementById('rpc-inp').value.trim()||'https://base.llamarpc.com';
+  
+  S.tcyAddr = document.getElementById('tcy-addr-inp').value.trim();
+  S.tcyStaked = parseFloat(document.getElementById('tcy-staked-inp').value.trim()) || 0;
+  ls(`${STORE}_tcy_addr`, S.tcyAddr);
+  ls(`${STORE}_tcy_stkd`, S.tcyStaked);
+
+  const nt=[];
+  S.tokens.forEach((_,i)=>{const sym=(document.getElementById(`ts${i}`)?.value||'').trim();const addr=(document.getElementById(`ta${i}`)?.value||'').trim();const dec=parseInt(document.getElementById(`td${i}`)?.value||'8');if(sym&&addr)nt.push({sym,addr,dec,v4626:sym.toUpperCase()==='BTCE'});});
+  S.tokens=nt;ls(`${STORE}_t`,JSON.stringify(S.tokens));ls(`${STORE}_r`,S.rpcUrl);_accountantAddr=null;
+  
+  closeModal('settings-modal');toast('Saved local settings','success');refreshAll();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RPC + CONTRACT
+// ═══════════════════════════════════════════════════════════
+let rid=1;
+async function rpc(method,params,url){const r=await fetch(url||S.rpcUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:rid++,method,params})});if(!r.ok)throw new Error(`HTTP ${r.status}`);const d=await r.json();if(d.error)throw new Error(d.error.message);return d.result;}
+async function rpcFb(method,params){const urls=[S.rpcUrl,...BASE_RPCS.filter(u=>u!==S.rpcUrl)];let le;for(const u of urls){try{const r=await rpc(method,params,u);if(u!==S.rpcUrl)S.rpcUrl=u;return r;}catch(e){le=e;}}throw le;}
+async function ercBal(ta,wa){const d='0x70a08231'+wa.slice(2).padStart(64,'0');const r=await rpcFb('eth_call',[{to:ta,data:d},'latest']);return r&&r!=='0x'?BigInt(r):0n;}
+function hexToAddr(hex){if(!hex||hex==='0x'||hex.length<42)return null;return'0x'+hex.slice(-40);}
+async function callNoArgs(addr,sel){try{const r=await rpcFb('eth_call',[{to:addr,data:sel},'latest']);return(r&&r!=='0x')?r:null;}catch(e){return null;}}
+
+async function getBoringVaultAccountant(vaultAddr){
+  let tellerAddr=null;
+  for(const sel of['0x57edab4e','0x4b4a3ae0']){const r=await callNoArgs(vaultAddr,sel);if(r){tellerAddr=hexToAddr(r);if(tellerAddr&&tellerAddr!=='0x0000000000000000000000000000000000000000')break;}}
+  if(!tellerAddr||tellerAddr==='0x0000000000000000000000000000000000000000'){const d=await callNoArgs(vaultAddr,'0x4fb3ccc5');if(d){const a=hexToAddr(d);if(a&&a!=='0x0000000000000000000000000000000000000000')return a;}return null;}
+  const acctR=await callNoArgs(tellerAddr,'0x4fb3ccc5');if(!acctR)return null;const acctAddr=hexToAddr(acctR);if(!acctAddr||acctAddr==='0x0000000000000000000000000000000000000000')return null;return acctAddr;
+}
+
+async function getRateFromAccountant(accountantAddr,wantAddr){
+  const wantPadded=wantAddr.slice(2).padStart(64,'0');
+  for(const sel of['0x820973da','0x1dcbb110']){try{const r=await rpcFb('eth_call',[{to:accountantAddr,data:sel+wantPadded},'latest']);if(r&&r!=='0x'){const raw=BigInt(r);if(raw===0n)continue;const r18=Number(raw)/1e18;if(r18>0.01&&r18<100)return r18;const r8=Number(raw)/1e8;if(r8>0.5&&r8<10)return r8;}}catch(e){}}
+  return null;
+}
+
+async function getVaultRate(vaultAddr,dec){
+  try{if(!_accountantAddr)_accountantAddr=await getBoringVaultAccountant(vaultAddr);if(_accountantAddr){for(const want of[LBTC_BASE,CBBTC_BASE,WBTC_BASE]){const rate=await getRateFromAccountant(_accountantAddr,want);if(rate)return rate;}}}catch(e){}
+  try{const taHex=await rpcFb('eth_call',[{to:vaultAddr,data:'0x01e1d114'},'latest']);const tsHex=await rpcFb('eth_call',[{to:vaultAddr,data:'0x18160ddd'},'latest']);if(taHex&&taHex!=='0x'&&tsHex&&tsHex!=='0x'){const ta=BigInt(taHex),ts=BigInt(tsHex);if(ts>0n){const rate=Number(ta)/Number(ts);if(rate>0.5&&rate<10)return rate;}}}catch(e){}
+  try{const oneShare=(10n**BigInt(dec)).toString(16).padStart(64,'0');const r=await rpcFb('eth_call',[{to:vaultAddr,data:'0x07a2d13a'+oneShare},'latest']);if(r&&r!=='0x'){const rate=Number(BigInt(r))/Math.pow(10,dec);if(rate>0.5&&rate<10)return rate;}}catch(e){}
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PRICES
+// ═══════════════════════════════════════════════════════════
+async function loadPrices(){
+  try{
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,thorchain,thorchain-yield,tcy&vs_currencies=usd,jpy&include_24hr_change=true');
+    const d=await r.json();
+    
+    S.btcP=d.bitcoin?.usd||S.btcP||85000;S.ethP=d.ethereum?.usd||S.ethP||2000;
+    S.jpyRate=d.bitcoin?.jpy&&d.bitcoin?.usd?d.bitcoin.jpy/d.bitcoin.usd:(S.jpyRate||150);
+    
+    if(d.thorchain?.usd){
+      runePrice=d.thorchain.usd;const ch=d.thorchain.usd_24h_change||0;
+      document.getElementById('rune-price-disp').textContent='$'+fmt(runePrice,4);
+      document.getElementById('rune-ch-disp').innerHTML=`<span class="${ch>=0?'up':'dn'}">${ch>=0?'+':''}${fmt(ch,2)}% 24h</span>`;
+      document.getElementById('p-rune').textContent='$'+fmt(runePrice,4);
+      document.getElementById('p-rune-ch').innerHTML=`<span class="${ch>=0?'up':'dn'}">${ch>=0?'+':''}${fmt(ch,2)}% 24h</span>`;
+    }
+    
+    const tcyData = d['thorchain-yield'] || d['tcy'];
+    if (tcyData?.usd) {
+      tcyPrice = tcyData.usd;
+      const ch = tcyData.usd_24h_change || 0;
+      document.getElementById('tcy-price-disp').textContent='$'+fmt(tcyPrice,4);
+      document.getElementById('tcy-ch-disp').innerHTML=`<span class="${ch>=0?'up':'dn'}">${ch>=0?'+':''}${fmt(ch,2)}% 24h</span>`;
+      document.getElementById('p-tcy').textContent='$'+fmt(tcyPrice,4);
+      document.getElementById('p-tcy-ch').innerHTML=`<span class="${ch>=0?'up':'dn'}">${ch>=0?'+':''}${fmt(ch,2)}% 24h</span>`;
+    }
+
+    const bc=d.bitcoin?.usd_24h_change||0;
+    document.getElementById('mc-btc').textContent='$'+Math.round(S.btcP).toLocaleString();
+    document.getElementById('mc-btc-ch').innerHTML=`<span class="${bc>=0?'up':'dn'}">${bc>=0?'+':''}${f(bc,2)}% 24h</span>`;
+    document.getElementById('mc-eth-p').textContent='$'+Math.round(S.ethP).toLocaleString();
+    document.getElementById('p-btc').textContent='$'+Math.round(S.btcP).toLocaleString();
+    document.getElementById('p-btc-ch').innerHTML=`<span class="${bc>=0?'up':'dn'}">${bc>=0?'+':''}${f(bc,2)}% 24h</span>`;
+  }catch(e){S.btcP=S.btcP||85000;S.ethP=S.ethP||2000;}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WALLET (LOMBARD) & BTCE CHECKPOINTING
+// ═══════════════════════════════════════════════════════════
+async function loadWallet(){
+  const wallet=S.wallets[S.aw];
+  if(!wallet) {
+      document.getElementById('pos-body').innerHTML='<div class="empty">No EVM wallet configured. Click "+ setup EVM wallet"</div>';
+      return;
+  }
+  document.getElementById('pos-body').innerHTML='<div class="empty"><span class="skel" style="height:13px;width:200px"></span></div>';
+  try{
+    const ethH=await rpcFb('eth_getBalance',[wallet.addr,'latest']);
+    const ethB=Number(BigInt(ethH))/1e18;const ethU=ethB*S.ethP;
+    document.getElementById('mc-eth-bal').textContent=`wallet: ${f(ethB,4)} ETH`;
+    document.getElementById('mc-eth-usd').textContent=fU(ethU);
+    document.getElementById('mc-eth-usd-sub').textContent=`≈ ${f(ethB,4)} ETH · ${fmtJPY(ethU)}`;
+    const btceToken=S.tokens.find(t=>t.v4626);
+    let vaultRate=1.0;if(btceToken)vaultRate=await getVaultRate(btceToken.addr,btceToken.dec);
+    if(vaultRate===null||vaultRate===1.0){document.getElementById('mc-rate').innerHTML='<span style="color:var(--re)">rate error</span>';vaultRate=null;}
+    const tRes=await Promise.allSettled(S.tokens.map(async t=>{const raw=await ercBal(t.addr,wallet.addr);const bal=Number(raw)/Math.pow(10,t.dec);let btcEq=null,rate=1;if(t.v4626&&bal>0&&vaultRate!==null){rate=vaultRate;btcEq=bal*rate;}return{...t,bal,raw,btcEq,rate};}));
+    const rows=[];
+    if(ethB>0.00001)rows.push({sym:'ETH',bal:ethB,dec:18,usd:ethU,type:'native',btcEq:null,rate:1});
+    tRes.forEach(r=>{if(r.status==='fulfilled'&&r.value.bal>1e-8){const t=r.value;const isBtc=BTC_SYMS.has(t.sym.toUpperCase());const isStbl=STBL_SYMS.has(t.sym.toUpperCase());let usd;if(t.btcEq!=null)usd=t.btcEq*S.btcP;else if(isBtc)usd=t.bal*S.btcP;else if(isStbl)usd=t.bal;else usd=0;rows.push({...t,usd,type:t.btcEq!=null?'vault':isBtc?'btc':isStbl?'stable':'other'});}});
+    const brow=rows.find(r=>r.sym==='BTCe');
+    if(brow&&brow.btcEq!=null){
+      const usd=brow.usd,rate=brow.rate,btcEq=brow.btcEq;
+      document.getElementById('hero-usd').innerHTML=fU(usd)+'<span style="font-size:16px;color:var(--t2);margin-left:12px">'+fmtJPY(usd)+'</span>';
+      document.getElementById('hero-btc').textContent=`${f(brow.bal,6)} BTCe = ${f(btcEq,8)} BTC`;
+      document.getElementById('hero-sub').innerHTML=`1 BTCe = <strong style="color:var(--tx)">${f(rate,8)}</strong> BTC &nbsp;·&nbsp; BTC @ $${Math.round(S.btcP).toLocaleString()} · ¥${Math.round(S.jpyRate||150).toLocaleString()}/USD`;
+      document.getElementById('mc-rate').textContent=f(rate,8);
+      S.lbtcUsd=usd;
+      
+      document.getElementById('port-lbtc-usd').textContent=fU(usd);
+      document.getElementById('port-lbtc-sub').textContent=`${f(brow.bal,6)} BTCe = ${f(btcEq,8)} BTC`;
+
+      // ---> LOCAL TRACKING CHECKPOINT FOR BTCE YIELD <---
+      if (rate && rate > 0) {
+        const now = new Date();
+        const chk = JP(ls(`${STORE}_chk`));
+        if (chk) {
+          if (brow.bal >= chk.bal * 0.99 && rate > chk.rate + 0.00000001) { 
+            const yieldBtc = brow.bal * (rate - chk.rate);
+            const yieldUsd = yieldBtc * S.btcP;
+            const newY = {
+              date: now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+              amount: yieldBtc,
+              token: 'BTC',
+              price: S.btcP,
+              usd: yieldUsd,
+              isNew: true
+            };
+            S.btceYields.unshift(newY);
+            ls(`${STORE}_by`, JSON.stringify(S.btceYields));
+            toast(`BTCe Compounded! +${f(yieldBtc,6)} BTC`, 'success');
+            
+            if (S.alerts.btceTog !== false) {
+               sendTelegramAlert(`🟢 <b>BTCe Vault Compounded!</b>\n\n<b>Yield Generated:</b> +${f(yieldBtc,6)} BTC\n<b>Value:</b> $${f(yieldUsd,2)}\n<b>New Rate:</b> 1 BTCe = ${f(rate,8)} BTC\n<b>Total Balance:</b> ${f(brow.bal,6)} BTCe`);
+            }
+          }
+        }
+        ls(`${STORE}_chk`, JSON.stringify({ rate, bal: brow.bal, ts: now.getTime() }));
+      }
+    }
+    const total=rows.reduce((s,r)=>s+(r.usd||0),0)+ethU;
+    rows.sort((a,b)=>(b.usd||0)-(a.usd||0));
+    if(!rows.length){document.getElementById('pos-body').innerHTML='<div class="empty">No balances found. Check Settings.</div>';return;}
+    document.getElementById('pos-body').innerHTML=`<table><thead><tr><th>asset</th><th>shares/balance</th><th>BTC equivalent</th><th>USD value</th><th>type</th></tr></thead><tbody>${rows.map(r=>{const[bg,fg]=IC[r.sym]||['#2a2a3a','#888'];const badge=r.type==='vault'?`<span class="badge bo">ERC-4626 vault</span>`:r.type==='btc'?`<span class="badge bg">BTC derivative</span>`:r.type==='stable'?`<span class="badge bb">stablecoin</span>`:r.type==='native'?`<span class="badge bt">native ETH</span>`:`<span class="badge bt">${r.sym}</span>`;const btcCell=r.btcEq!=null?`<span style="color:var(--or);font-family:var(--mo)">${f(r.btcEq,8)}</span><div style="font-size:10px;color:var(--t3);margin-top:1px">rate ${f(r.rate,8)}</div>`:BTC_SYMS.has(r.sym.toUpperCase())?`<span style="color:var(--t2)">${f(r.bal,8)}</span>`:`<span style="color:var(--t3)">—</span>`;return`<tr><td><div class="tc"><div class="ti" style="background:${bg};color:${fg}">${r.sym.slice(0,2)}</div><div><div class="tn">${r.sym}</div><div class="td2">${r.type}</div></div></div></td><td style="font-family:var(--mo)">${f(r.bal,r.dec>=8?8:2)}</td><td>${btcCell}</td><td style="font-family:var(--mo);color:var(--te)">${fU(r.usd)}</td><td>${badge}</td></tr>`;}).join('')}<tr style="border-top:1px solid var(--cb)"><td colspan="3" style="font-size:10px;color:var(--t2);letter-spacing:.08em;text-transform:uppercase">total wallet (incl. ETH)</td><td style="font-family:var(--mo);font-size:15px;font-weight:500;color:var(--or)">${fU(total)}</td><td></td></tr></tbody></table>`;
+  }catch(e){document.getElementById('pos-body').innerHTML=`<div class="empty"><div style="color:var(--re)">⚠ Base chain query failed</div><div style="margin-top:6px;color:var(--t3);font-size:11px;line-height:1.8">${e.message||'Network error'}<br>RPC: ${S.rpcUrl}</div></div>`;document.getElementById('hero-usd').textContent='—';}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PORTFOLIO OVERVIEW
+// ═══════════════════════════════════════════════════════════
+function updatePortfolio(){
+  const tcyPos = S.tcyStaked * tcyPrice;
+  const yieldUsd = TCY_TOTAL_USD;
+  const total = S.lbtcUsd + tcyPos; 
+  
+  document.getElementById('port-total').innerHTML=fU(total)+'<span style="font-size:18px;color:var(--t2);margin-left:14px">'+fmtJPY(total)+'</span>';
+  document.getElementById('port-btc-line').textContent=`LBTC Vault: ${fU(S.lbtcUsd)} · TCY Staked: ${fU(tcyPos)}`;
+  document.getElementById('port-sub').textContent=`Yield earned (${fU(yieldUsd)}) is tracked separately. BTC @ $${Math.round(S.btcP).toLocaleString()}`;
+  
+  document.getElementById('port-tcy-usd').textContent=fU(tcyPos);
+  document.getElementById('port-tcy-sub').textContent=`${fmt(S.tcyStaked)} TCY staked`;
+  
+  document.getElementById('p-tcy-pos').textContent=fU(tcyPos);
+  document.getElementById('p-tcy-pos-sub').textContent=`${fmt(S.tcyStaked)} TCY`;
+  document.getElementById('p-tcy-yield').textContent=fU(yieldUsd);
+  
+  document.getElementById('cmp-lbtc').textContent=fU(S.lbtcUsd);
+  document.getElementById('cmp-tcy').textContent=fU(tcyPos);
+  document.getElementById('cmp-tcy-lbl').textContent=`TCY staked (${fmt(S.tcyStaked)})`;
+  document.getElementById('cmp-yield').textContent=fU(yieldUsd);
+  document.getElementById('cmp-total').textContent=fU(total);
+  
+  const last30usd = S.tcyCsv.slice(0,30).reduce((s,r)=>s+r[2],0);
+  const apy = tcyPos>0 ? ((last30usd/tcyPos)*(365/30)*100).toFixed(1)+'%' : '—';
+  document.getElementById('cmp-tcy-apy').textContent=apy;
+  
+  renderPortDonut(S.lbtcUsd, tcyPos); 
+  renderPortPreview(); 
+}
+
+function renderPortDonut(lbtc,tcyPos){
+  const el=document.getElementById('portDonut');if(!el)return;
+  if(charts['portDonut'])charts['portDonut'].destroy();
+  const total=lbtc+tcyPos||1; 
+  charts['portDonut']=new Chart(el,{type:'doughnut',data:{
+    labels:['LBTC Vault','TCY Position'],
+    datasets:[{data:[lbtc,tcyPos],backgroundColor:['#F7931A','#00C4A0'],borderWidth:0,hoverOffset:4}]
+  },options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:true,position:'bottom',labels:{color:'#7C7C8E',font:{family:'IBM Plex Mono',size:10},boxWidth:10,padding:14}},tooltip:{callbacks:{label:c=>`${c.label}: ${fU(c.raw)} (${((c.raw/total)*100).toFixed(1)}%)` },backgroundColor:'rgba(13,16,24,.95)',titleColor:'#7C7C8E',bodyColor:'#DDD9CF',borderColor:'rgba(255,255,255,.07)',borderWidth:1,padding:8,bodyFont:{family:'IBM Plex Mono',size:11}}}}});
+  document.getElementById('port-alloc-title').textContent=`${((lbtc/total)*100).toFixed(0)}% LBTC · ${(((tcyPos)/total)*100).toFixed(0)}% TCY`;
+}
+
+function renderPortPreview(){
+  const allYields = [
+    ...S.tcyCsv.map(r => ({ date: r[0], amount: r[1], token: 'RUNE', price: r[2]/r[1], usd: r[2], type: 'tcy', ts: new Date(r[0]).getTime() })),
+    ...S.btceYields.map(r => ({ ...r, type: 'btce', ts: new Date(r.date).getTime() }))
+  ].sort((a,b) => b.ts - a.ts); 
+
+  document.getElementById('port-payout-count').textContent = `${allYields.length} total payouts`;
+  const preview = document.getElementById('port-payout-preview');
+  
+  if (allYields.length === 0) {
+      preview.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--t2);padding:20px">No distributions found. Connect wallets in settings to begin local tracking.</td></tr>`;
+      return;
+  }
+
+  preview.innerHTML = allYields.slice(0,10).map((r, i) => {
+    if (r.type === 'btce') {
+      return `<tr>
+        <td>${r.date}</td>
+        <td style="font-family:var(--mo);color:var(--or)">${f(r.amount,5)} BTC <span class="compound-badge">COMPOUNDED</span></td>
+        <td style="color:var(--t2)">$${f(r.price,0)}</td>
+        <td style="color:var(--or)">+$${f(r.usd)}</td>
+      </tr>`;
+    } else {
+      return `<tr>
+        <td>${r.date}</td>
+        <td style="font-family:var(--mo);color:var(--tx)">${f(r.amount,4)} RUNE</td>
+        <td style="color:var(--t2)">$${f(r.price,4)}</td>
+        <td style="color:${i===0?'var(--te)':'var(--tx)'}">+$${f(r.usd)}</td>
+      </tr>`;
+    }
+  }).join('');
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  TCY CHARTS + TABLE
+// ═══════════════════════════════════════════════════════════
+function mkChart(id,type,labels,datasets,opts={}){
+  const el=document.getElementById(id);if(!el)return;
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(el,{type,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' $'+fmt(c.parsed.y)},backgroundColor:'rgba(13,16,24,.95)',titleColor:'#7C7C8E',bodyColor:'#DDD9CF',borderColor:'rgba(255,255,255,.07)',borderWidth:1,padding:8,titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:11}}},scales:{x:{ticks:{color:'#484858',font:{family:'IBM Plex Mono',size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,.04)'},border:{color:'rgba(255,255,255,.06)'}},y:{ticks:{color:'#484858',font:{family:'IBM Plex Mono',size:10},callback:v=>'$'+fmt(v,0)},grid:{color:'rgba(255,255,255,.04)'},border:{color:'rgba(255,255,255,.06)'}}}},...(opts.extra||{})});
+}
+
+function renderTCYCharts(range=30){
+  if (S.tcyCsv.length === 0) return;
+
+  const rev=[...S.tcyCsv].reverse();
+  let acc=0;
+  const cumL=rev.map(r=>{const d=new Date(r[0]);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})});
+  const cumD=rev.map(r=>{acc+=r[2];return parseFloat(acc.toFixed(2))});
+  const g2=document.getElementById('tcyCumChart')?.getContext('2d');
+  if(g2){const gr=g2.createLinearGradient(0,0,0,200);gr.addColorStop(0,'rgba(0,196,160,.14)');gr.addColorStop(1,'rgba(0,196,160,0)');if(charts['tcyCumChart'])charts['tcyCumChart'].destroy();charts['tcyCumChart']=new Chart(g2,{type:'line',data:{labels:cumL,datasets:[{data:cumD,borderColor:'#00C4A0',backgroundColor:gr,borderWidth:2,fill:true,pointRadius:0,tension:.35}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'$'+fmt(c.raw)},backgroundColor:'rgba(13,16,24,.95)',titleColor:'#7C7C8E',bodyColor:'#DDD9CF',borderColor:'rgba(255,255,255,.07)',borderWidth:1,padding:8,bodyFont:{family:'IBM Plex Mono',size:11}}},scales:{x:{ticks:{color:'#484858',font:{family:'IBM Plex Mono',size:10},maxRotation:0,autoSkip:true,maxTicksLimit:7},grid:{color:'rgba(255,255,255,.04)'},border:{color:'rgba(255,255,255,.06)'}},y:{ticks:{color:'#484858',font:{family:'IBM Plex Mono',size:10},callback:v=>'$'+fmt(v,0)},grid:{color:'rgba(255,255,255,.04)'},border:{color:'rgba(255,255,255,.06)'}}}}});}
+  
+  const slice=S.tcyCsv.slice(0,range).reverse();
+  const barL=slice.map(r=>{const d=new Date(r[0]);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})});
+  const barD=slice.map(r=>r[2]);
+  mkChart('tcyBarChart','bar',barL,[{data:barD,backgroundColor:'rgba(0,196,160,0.4)',borderColor:'#00C4A0',borderWidth:1}]);
+  
+  const spark30=S.tcyCsv.slice(0,30).reverse().map(r=>r[2]);
+  const spL=S.tcyCsv.slice(0,30).reverse().map(r=>{const d=new Date(r[0]);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})});
+  const sg=document.getElementById('tcySparkChart')?.getContext('2d');
+  if(sg){const sgr=sg.createLinearGradient(0,0,0,75);sgr.addColorStop(0,'rgba(0,196,160,.14)');sgr.addColorStop(1,'rgba(0,196,160,0)');if(charts['tcySparkChart'])charts['tcySparkChart'].destroy();charts['tcySparkChart']=new Chart(sg,{type:'line',data:{labels:spL,datasets:[{data:spark30,borderColor:'#00C4A0',backgroundColor:sgr,borderWidth:1.5,fill:true,pointRadius:0,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});}
+  
+  const months={};
+  S.tcyCsv.forEach(([date,,usd])=>{const d=new Date(date);const k=d.toLocaleDateString('en-US',{year:'numeric',month:'short'});months[k]=(months[k]||0)+usd;});
+  const mSorted=Object.entries(months).sort((a,b)=>new Date(a[0])-new Date(b[0]));
+  mkChart('tcyMonthChart','bar',mSorted.map(x=>x[0]),[{data:mSorted.map(x=>parseFloat(x[1].toFixed(2))),backgroundColor:'rgba(74,158,255,0.4)',borderColor:'#4A9EFF',borderWidth:1}]);
+}
+let tcyRange=30;
+function setTcyRange(r,btn){tcyRange=r;document.querySelectorAll('[onclick^="setTcyRange"]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const slice=S.tcyCsv.slice(0,r).reverse();const barL=slice.map(x=>{const d=new Date(x[0]);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})});const barD=slice.map(x=>x[2]);mkChart('tcyBarChart','bar',barL,[{data:barD,backgroundColor:'rgba(0,196,160,0.4)',borderColor:'#00C4A0',borderWidth:1}]);}
+
+function renderTCYMetrics(){
+  const tcyPos = S.tcyStaked * tcyPrice;
+  
+  TCY_TOTAL_RUNE = S.tcyCsv.reduce((s,r)=>s+r[1],0);
+  TCY_TOTAL_USD = S.tcyCsv.reduce((s,r)=>s+r[2],0);
+  
+  const last30usd = S.tcyCsv.slice(0,30).reduce((s,r)=>s+r[2],0);
+  const apy = tcyPos > 0 ? ((last30usd/tcyPos)*(365/30)*100).toFixed(1)+'%' : '—';
+  
+  const dispAddr = S.tcyAddr ? fA(S.tcyAddr) : 'Setup Required';
+  
+  document.getElementById('tcy-hero-usd').textContent='$'+fmt(tcyPos);
+  document.getElementById('tcy-hero-staked').textContent=`${fmt(S.tcyStaked)} TCY staked`;
+  document.getElementById('tcy-hero-sub').textContent=`TCY @ $${fmt(tcyPrice,4)} · RUNE @ $${fmt(runePrice,4)} · ${dispAddr}`;
+  
+  document.getElementById('tcy-staked-metric').textContent=fmt(S.tcyStaked);
+  document.getElementById('tcy-staked-usd').textContent='$'+fmt(tcyPos)+' USD';
+  document.getElementById('tcy-total-rune').textContent=fmt(TCY_TOTAL_RUNE,4)+' RUNE';
+  document.getElementById('tcy-total-rune-usd').textContent='$'+fmt(TCY_TOTAL_RUNE*runePrice)+' at live price';
+  document.getElementById('tcy-total-usd-earned').textContent='$'+fmt(TCY_TOTAL_USD);
+  document.getElementById('tcy-payout-count').textContent=S.tcyCsv.length+' payouts';
+  document.getElementById('tcy-est-apy').textContent=apy;
+  
+  document.getElementById('tcy-pos-sum-staked').textContent=fmt(S.tcyStaked);
+  document.getElementById('tcy-pos-usd-sum').textContent='$'+fmt(tcyPos);
+  document.getElementById('tcy-rune-sum').textContent=fmt(TCY_TOTAL_RUNE,4)+' RUNE';
+  document.getElementById('tcy-usd-sum').textContent='$'+fmt(TCY_TOTAL_USD);
+  
+  document.getElementById('tcy-cum-total').textContent = S.tcyCsv.length ? '$'+fmt(TCY_TOTAL_USD)+' total earned' : 'awaiting data';
+  document.getElementById('tcy-30d-total').textContent='$'+fmt(last30usd);
+  document.getElementById('tcy-30d-sub').textContent=fmt(last30usd/30,2)+' avg/day (30d)';
+  
+  // Update link
+  const linkEl = document.getElementById('rune-tools-link');
+  if (S.tcyAddr) {
+      linkEl.href = `https://rune.tools/tcy?address=${S.tcyAddr}`;
+      linkEl.textContent = 'view dashboard ↗';
+  } else {
+      linkEl.href = '#';
+      linkEl.textContent = 'setup required';
+  }
+}
+
+function renderTCYTable(){
+  document.getElementById('tcy-live-badge').textContent = S.tcyCsv.length;
+  document.getElementById('tcy-addr-disp1').textContent = S.tcyAddr || 'Configure in settings';
+  document.getElementById('tcy-addr-disp2').textContent = S.tcyAddr ? fA(S.tcyAddr) : 'Not configured';
+  document.getElementById('tcy-staked-disp3').textContent = `${fmt(S.tcyStaked)} TCY`;
+  document.getElementById('tcy-payouts-disp4').textContent = S.tcyCsv.length;
+  
+  if (S.tcyCsv.length > 0) {
+      document.getElementById('tcy-track-since').textContent = S.tcyCsv[S.tcyCsv.length-1][0];
+      document.getElementById('tcy-track-since2').textContent = S.tcyCsv[S.tcyCsv.length-1][0];
+  }
+
+  const tbody=document.getElementById('tcy-table-body');
+  if (S.tcyCsv.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--t2);padding:20px">No Thorchain distributions logged. Waiting for local background tracker or manual CSV paste.</td></tr>`;
+      return;
+  }
+  tbody.innerHTML=S.tcyCsv.map((r,i)=>{const runeP=r[2]/r[1];return`<tr><td>${r[0]}</td><td style="font-family:var(--mo);color:var(--tx);font-weight:500">${fmt(r[1],4)}</td><td style="color:var(--t2)">${'$'+fmt(runeP,4)}</td><td style="color:${i===0?'var(--te)':'var(--tx)'}">${'$'+fmt(r[2])}</td></tr>`;}).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DIAGNOSTICS (Runs fully in background)
+// ═══════════════════════════════════════════════════════════
+async function runDiagnostics(){
+  const panel=document.getElementById('diag-panel');
+  const VAULT='0x3a4baaBf4DC9910596821615e848f0e6545762F3';
+  const lines=[];
+  const add=(k,v,ok)=>lines.push(`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03)"><span style="color:var(--t2)">${k}</span><span style="color:${ok===false?'var(--re)':ok===true?'var(--te)':'var(--tx)'};font-family:var(--mo)">${v}</span></div>`);
+  const probes=[['totalSupply()','0x18160ddd','div1e8'],['decimals()','0x313ce567','int'],['name()','0x06fdde03','str'],['symbol()','0x95d89b41','str'],['teller()','0x57edab4e','addr'],['accountant()','0x4fb3ccc5','addr'],['totalAssets()','0x01e1d114','div1e8'],['pricePerShare()','0x99530b06','div1e18'],['isPaused()','0xb187bd26','bool']];
+  add('vault contract',VAULT,null);add('rpc endpoint',S.rpcUrl,null);
+  for(const[name,sel,type]of probes){try{const r=await callNoArgs(VAULT,sel);if(!r||r==='0x'||r==='0x'+'0'.repeat(64)){add(name,'no response',false);}else{let display=r;if(type==='addr')display=hexToAddr(r)||r;else if(type==='div1e8')display=(Number(BigInt(r))/1e8).toFixed(8);else if(type==='div1e18')display=(Number(BigInt(r))/1e18).toFixed(10);else if(type==='int')display=parseInt(r,16).toString();else if(type==='bool')display=BigInt(r)!==0n?'true':'false';else if(type==='str'){try{const hex=r.slice(2);const offset=parseInt(hex.slice(0,64),16)*2;const len=parseInt(hex.slice(offset,offset+64),16)*2;display=Buffer.from(hex.slice(offset+64,offset+64+len),'hex').toString('utf8');}catch(e){display=r.slice(0,20)+'…';}}add(name,display,true);}}catch(e){add(name,'error: '+e.message.slice(0,40),false);}}
+  panel.innerHTML=lines.join('')+`<div style="margin-top:8px;font-size:10px;color:var(--t3)">Probed at ${new Date().toLocaleTimeString()}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TVL + APY (LOMBARD)
+// ═══════════════════════════════════════════════════════════
+async function loadTVL(){
+  try{const r=await fetch('https://api.llama.fi/protocol/lombard-vaults');const d=await r.json();S.tvlData=(d.tvl||[]).filter(x=>x.totalLiquidityUSD>0);if(!S.tvlData.length)return;const last=S.tvlData[S.tvlData.length-1];const p7=S.tvlData[Math.max(0,S.tvlData.length-8)];const pct=(last.totalLiquidityUSD-p7.totalLiquidityUSD)/p7.totalLiquidityUSD*100;document.getElementById('mc-tvl').textContent=fU(last.totalLiquidityUSD);document.getElementById('mc-tvl-ch').innerHTML=`<span class="${pct>=0?'up':'dn'}">${pct>=0?'+':''}${f(pct,1)}% 7d</span>`;document.getElementById('tvl-val').textContent=fU(last.totalLiquidityUSD);document.getElementById('tvl-ch').innerHTML=`<span class="${pct>=0?'up':'dn'}">${pct>=0?'+':''}${f(pct,1)}% 7d</span>`;renderTVL();}catch(e){document.getElementById('mc-tvl').textContent='—';}
+}
+function renderTVL(){
+  const sl=S.tvlData.slice(-90);const labels=sl.map(d=>{const dt=new Date(d.date*1000);return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'})});const vals=sl.map(d=>d.totalLiquidityUSD);
+  const ctx=document.getElementById('tvlChart').getContext('2d');if(S.tvlChart)S.tvlChart.destroy();
+  const g=ctx.createLinearGradient(0,0,0,75);g.addColorStop(0,'rgba(74,158,255,.16)');g.addColorStop(1,'rgba(74,158,255,0)');
+  S.tvlChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:vals,borderColor:'#4A9EFF',backgroundColor:g,borderWidth:1.5,fill:true,pointRadius:0,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fU(c.raw)},backgroundColor:'rgba(13,16,24,.95)',titleColor:'#7C7C8E',bodyColor:'#DDD9CF',borderColor:'rgba(255,255,255,.07)',borderWidth:1,padding:7,bodyFont:{family:'IBM Plex Mono',size:11}}},scales:{x:{display:false},y:{display:false}}}});
+}
+async function loadAPY(){
+  try{const r=await fetch('https://yields.llama.fi/pools');const d=await r.json();const pools=(d.data||[]).filter(p=>(p.project||'').toLowerCase().includes('lombard'));let pool=pools.find(p=>(p.chain||'').toLowerCase()==='base')||pools[0];if(!pool)pool=(d.data||[]).find(p=>(p.symbol||'').toLowerCase().includes('btce'));if(pool){S.apyPid=pool.pool;const apy=+((pool.apy||pool.apyBase||3.97).toFixed(2));document.getElementById('mc-apy').textContent=apy+'%';document.getElementById('mc-apy-ch').innerHTML=`<span class="nt2">base ${f(pool.apyBase||0,2)}% + rwd ${f(pool.apyReward||0,2)}%</span>`;document.getElementById('apy-stat').textContent=apy+'% live APY';document.getElementById('p-lbtc-apy').textContent=apy+'%';document.getElementById('cmp-apy').textContent=apy+'%';document.getElementById('ay-total').textContent=apy+'%';await loadAPYHist(S.apyPid);}else{document.getElementById('mc-apy').textContent='3.97%';renderAPY([],S.apyRange);}}catch(e){document.getElementById('mc-apy').textContent='3.97%';renderAPY([],S.apyRange);}
+}
+async function loadAPYHist(pid){try{const r=await fetch(`https://yields.llama.fi/chart/${pid}`);const d=await r.json();S.apyData=(d.data||[]).filter(x=>x.apy!=null);renderAPY(S.apyData,S.apyRange);}catch(e){renderAPY([],S.apyRange);}}
+function renderAPY(data,days){
+  const sl=data.length>days?data.slice(-days):data;const hL=sl.map(d=>{const dt=new Date(d.timestamp||d.date);return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'})});const hV=sl.map(d=>+parseFloat(d.apy||0).toFixed(3));
+  let pL=[],pV=[];if(hV.length>=7){const rc=hV.slice(-Math.min(21,hV.length));const avg=rc.reduce((a,b)=>a+b,0)/rc.length;const tr=(rc[rc.length-1]-rc[0])/rc.length;const np=Math.min(30,Math.round(days*.35));const ld=sl.length?new Date(sl[sl.length-1].timestamp||sl[sl.length-1].date):new Date();for(let i=1;i<=np;i++){const dt=new Date(ld);dt.setDate(dt.getDate()+i);pL.push(dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}));pV.push(+Math.max(0,avg+tr*i*Math.exp(-i*.05)).toFixed(3));}}
+  const aL=[...hL,...pL];const hF=[...hV,...Array(pL.length).fill(null)];const pF=[...Array(Math.max(0,hV.length-1)).fill(null),...(hV.length?[hV[hV.length-1]]:[]),...pV];
+  const ctx=document.getElementById('apyChart').getContext('2d');if(S.apyChart)S.apyChart.destroy();
+  const g=ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,'rgba(247,147,26,.14)');g.addColorStop(1,'rgba(247,147,26,0)');
+  S.apyChart=new Chart(ctx,{type:'line',data:{labels:aL,datasets:[{label:'Historical APY',data:hF,borderColor:'#F7931A',backgroundColor:g,borderWidth:2,fill:true,pointRadius:0,tension:.35,spanGaps:false},{label:'Projected APY',data:pF,borderColor:'#00C4A0',backgroundColor:'rgba(0,196,160,.04)',borderWidth:1.5,borderDash:[5,4],fill:false,pointRadius:0,tension:.3,spanGaps:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${f(c.raw,2)}%`},backgroundColor:'rgba(13,16,24,.95)',titleColor:'#7C7C8E',bodyColor:'#DDD9CF',borderColor:'rgba(255,255,255,.07)',borderWidth:1,padding:8,titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:11}}},scales:{x:{ticks:{maxTicksLimit:6,maxRotation:0,color:'#484858',font:{family:'IBM Plex Mono',size:10}},grid:{color:'rgba(255,255,255,.04)'},border:{color:'rgba(255,255,255,.06)'}},y:{ticks:{callback:v=>v+'%',color:'#484858',font:{family:'IBM Plex Mono',size:10}},grid:{color:'rgba(255,255,255,.04)'},border:{color:'rgba(255,255,255,.06)'}}}}});
+}
+function setApyRange(n,btn){S.apyRange=n;document.querySelectorAll('[onclick^="setApyRange"]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAPY(S.apyData,n);}
+
+// ═══════════════════════════════════════════════════════════
+//  TCY ALERTS (WEBHOOK) & TELEGRAM INTEGRATION
+// ═══════════════════════════════════════════════════════════
+function saveAlertSettings() {
+  S.alerts = {
+    tgTok: document.getElementById('tg-tok').value.trim(),
+    tgChat: document.getElementById('tg-chat').value.trim(),
+    tcyTog: document.getElementById('tg-tcy-tg')?.checked ?? true,
+    btceTog: document.getElementById('tg-btce-tg')?.checked ?? true
+  };
+  ls(`${STORE}_a`, JSON.stringify(S.alerts));
+}
+
+async function sendTelegramAlert(htmlText) {
+  const tok = S.alerts.tgTok;
+  const cid = S.alerts.tgChat;
+  if (!tok || !cid) return false;
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ chat_id: cid, text: htmlText, parse_mode: 'HTML', disable_web_page_preview: true })
+    });
+    return r.ok;
+  } catch(e) { console.error('TG Error', e); return false; }
+}
+
+async function fireTcyAlert(type){
+  const payload={event:'tcy_payout_detected',wallet:S.tcyAddr||'Unconfigured',timestamp:new Date().toISOString(),latest_payout:{date:(S.tcyCsv[0]&&S.tcyCsv[0][0])||'N/A',rune_amount:(S.tcyCsv[0]&&fmt(S.tcyCsv[0][1],4))||0,usd_value:(S.tcyCsv[0]&&'$'+fmt(S.tcyCsv[0][2]))||0},staked_tcy:fmt(S.tcyStaked),portfolio_usd:'$'+fmt(S.tcyStaked*tcyPrice),total_rune_earned:fmt(TCY_TOTAL_RUNE,4),total_usd_earned:'$'+fmt(TCY_TOTAL_USD),tcy_price:'$'+fmt(tcyPrice,4),rune_price:'$'+fmt(runePrice,4),tx_hash:'0x'+Math.random().toString(16).slice(2,18).toUpperCase()};
+  if(type==='telegram'){
+    const msg = `🧪 <b>Test Alert</b>\n\n<b>Event:</b> Dashboard Connection Test\n<b>Staked TCY:</b> ${payload.staked_tcy}\n<b>Portfolio Value:</b> ${payload.portfolio_usd}`;
+    const ok = await sendTelegramAlert(msg);
+    if(ok) toast(`Telegram alert sent to ${S.alerts.tgChat}`, 'success');
+    else toast(`Failed to send Telegram alert. Check Token/Chat ID.`, 'error');
+  }
+  else if(type==='webhook'){const url=document.getElementById('wh-url').value;if(url)fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(()=>{});toast('Webhook fired · '+payload.tx_hash.slice(0,18)+'…','success');}
+  else{document.getElementById('wlog').style.display='block';document.getElementById('wlog-pre').textContent=JSON.stringify(payload,null,2);}
+}
+
+function checkNewTcyPayouts() {
+   const lastCnt = JP(ls(`${STORE}_tcy_cnt`)) || S.tcyCsv.length;
+   if (S.tcyCsv.length > lastCnt) {
+       const newCount = S.tcyCsv.length - lastCnt;
+       const latest = S.tcyCsv[0];
+       if (S.alerts.tcyTog !== false) {
+           sendTelegramAlert(`🔵 <b>New TCY Payout Received!</b>\n\n<b>Reward:</b> +${f(latest[1],4)} RUNE\n<b>Value:</b> $${f(latest[2],2)}\n<b>Total Staked:</b> ${fmt(S.tcyStaked)} TCY\n<b>Note:</b> ${newCount} new distribution(s) detected.`);
+       }
+       ls(`${STORE}_tcy_cnt`, S.tcyCsv.length);
+       toast('New RUNE payout detected!', 'success');
+   } else if (S.tcyCsv.length < lastCnt) {
+       ls(`${STORE}_tcy_cnt`, S.tcyCsv.length); // update internally if data shrinks
+   }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MAIN REFRESH (Decoupled & Parallelized)
+// ═══════════════════════════════════════════════════════════
+async function refreshAll(){
+  const btn=document.getElementById('refresh-btn');
+  btn.innerHTML='<span class="spin">↻</span> loading';
+  btn.disabled=true;
+  try{
+    await loadPrices();
+    renderTCYMetrics();
+    
+    runDiagnostics().catch(e => console.warn("Diagnostics error", e));
+
+    await Promise.all([
+      loadTVL(),
+      loadAPY(),
+      loadWallet() 
+    ]);
+
+    updatePortfolio(); 
+    checkNewTcyPayouts(); 
+    
+    document.getElementById('last-upd').textContent='last sync: '+new Date().toLocaleTimeString('en-US',{hour12:false});
+    toast('All data refreshed','success');
+  }catch(e){
+    toast('Some data failed — check console','error');
+    console.error(e);
+  }
+  finally{
+    btn.innerHTML='↻ refresh';
+    btn.disabled=false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+document.getElementById('tg-tok').value = S.alerts.tgTok || '';
+document.getElementById('tg-chat').value = S.alerts.tgChat || '';
+if(S.alerts.tcyTog !== undefined) document.getElementById('tg-tcy-tg').checked = S.alerts.tcyTog;
+if(S.alerts.btceTog !== undefined) document.getElementById('tg-btce-tg').checked = S.alerts.btceTog;
+
+renderWB();
+renderTCYTable();
+renderTCYMetrics();
+renderTCYCharts(30);
+updatePortfolio();
+refreshAll();
+setInterval(refreshAll, 5*60*1000);
+</script>
+</body>
+</html>
