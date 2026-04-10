@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Portfolio Tracker Bot — BTCe Vault (Lombard) + TCY Staker (THORChain)
-//  Version 5.3 — High Precision & Privacy Protected
+//  Version 5.5 — High Precision & Privacy Protected (English Version)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
@@ -23,9 +23,10 @@ const WBTC  = "0x0555E30da8f98308EdB960aa94C0Db47230d2B9c";
 const LBTC  = "0xecAc9C5F704e954931349Da37F60E39f515c11c1";
 const THORNODE = "https://thornode.ninerealms.com";
 
-// BUG 1 FIX: Using 'thorchain-tcy' as the correct CoinGecko slug
+// BUG FIX 1: Using 'thorchain-tcy' as the correct CoinGecko slug
 const CG_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,thorchain,thorchain-tcy&vs_currencies=usd&include_24hr_change=true";
 
+// Helper: EVM RPC call with fallback
 async function rpc(method, params) {
     for (const url of BASE_RPCS) {
         try {
@@ -48,7 +49,7 @@ async function ethCall(to, data) {
     return (r && r !== '0x') ? r : null;
 }
 
-// BUG 3 FIX: Auto-scaling logic to handle 1e18 vs 1e8 accountant returns
+// BUG FIX 3: Auto-scaling logic to handle 1e18 vs 1e8 accountant returns
 async function getVaultRate() {
     try {
         const tellerHex = await ethCall(VAULT, '0x57edab4e');
@@ -110,7 +111,7 @@ async function getPrices() {
     }
 }
 
-// BUG 2 FIX: Calling the specific TCY Staker endpoint
+// BUG FIX 2: Calling the specific TCY Staker endpoint
 async function getTCYAmount() {
     if (!TCY_WALLET) return null;
     try {
@@ -118,8 +119,13 @@ async function getTCYAmount() {
         const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
         if (!res.ok) throw new Error(`THORNode HTTP ${res.status}`);
         const d = await res.json();
-        const raw = d.amount ?? d.tcy_amount ?? d.units ?? null;
-        return raw !== null ? Number(raw) / 1e8 : null;
+        
+        // Handle both arrays and objects from THORNode
+        const data = Array.isArray(d) ? d[0] : d;
+        const raw = data.amount ?? data.tcy_amount ?? data.units ?? data.asset_deposit_value ?? null;
+        
+        if (raw === null) throw new Error("Could not find balance in API response");
+        return Number(raw) / 1e8;
     } catch (e) {
         console.warn(`  getTCYAmount() failed: ${e.message}`);
         return null;
@@ -140,9 +146,11 @@ async function runBot() {
 
         const p = prices || (old ? { btc: old.lastBtcPrice, tcy: old.lastTcyPrice, rune: old.lastRunePrice || 0 } : null);
         const liveRate = liveRateRaw || old?.lastBtceRate || null;
+        
+        // Fallback to old value if new fetch fails to prevent null in dashboard
         const tcyAmount = tcyAmountRaw || old?.lastTcyAmount || null;
 
-        if (!p || !EVM_WALLET) throw new Error("Missing essential config or prices");
+        if (!p || !EVM_WALLET) throw new Error("Missing critical config or prices");
 
         const padAddr = EVM_WALLET.slice(2).toLowerCase().padStart(64, '0');
         const balHex = await ethCall(VAULT, '0x70a08231' + padAddr);
@@ -153,7 +161,7 @@ async function runBot() {
         const tcyUsd = tcyAmount ? tcyAmount * p.tcy : (old?.lastTcyUsd || 0);
         const totalUsd = lbtcUsd + tcyUsd;
 
-        // Compound Alert
+        // Alert: Vault compound
         if (old && liveRate > old.lastBtceRate && (liveRate - old.lastBtceRate) < 0.01) {
             const yieldBtc = btceBal * (liveRate - old.lastBtceRate);
             await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
@@ -187,7 +195,7 @@ async function runBot() {
             body: JSON.stringify(newState)
         });
 
-        console.log(`✅ Success. Portfolio: $${totalUsd.toFixed(2)}`);
+        console.log(`✅ Success. Portfolio Total: $${totalUsd.toFixed(2)}`);
 
     } catch (e) {
         console.error("🛑 Fatal Audit Error:", e.message);
