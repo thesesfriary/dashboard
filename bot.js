@@ -54,6 +54,7 @@ async function ethCall(to, data) {
 }
 
 function hexToAddr(hex) {
+    if (!hex || hex.length < 42) return null;
     return '0x' + hex.slice(-40);
 }
 
@@ -61,33 +62,59 @@ function hexToAddr(hex) {
 //  VAULT RATE — The 3-Hop Discovery
 // ─────────────────────────────────────────────────────────────────────────────
 async function getVaultRate() {
-    // 1. Vault -> teller()
+    console.log("📡 Discovering rate via Accountant chain...");
+    
+    // 1. Vault -> teller() (0x57edab4e)
     const tellerHex = await ethCall(VAULT, '0x57edab4e');
     const tellerAddr = hexToAddr(tellerHex);
+    if (!tellerAddr) throw new Error("Could not find Teller");
+    console.log(`🏦 Teller: ${tellerAddr}`);
 
-    // 2. Teller -> accountant()
+    // 2. Teller -> accountant() (0x4fb3ccc5)
     const acctHex = await ethCall(tellerAddr, '0x4fb3ccc5');
     const acctAddr = hexToAddr(acctHex);
+    if (!acctAddr) throw new Error("Could not find Accountant");
+    console.log(`📑 Accountant: ${acctAddr}`);
 
-    // 3. Accountant -> getRateInQuoteSafe()
-    // We try cbBTC first as it's the most common quote for BTCe
-    const wantTokens = [CBBTC, LBTC, WBTC];
-    for (const addr of wantTokens) {
-        try {
-            const paddedWant = addr.slice(2).padStart(64, '0');
-            const rateHex = await ethCall(acctAddr, '0x820973da' + paddedWant);
-            if (!rateHex) continue;
-            
-            const rateRaw = BigInt(rateHex);
-            const rate18 = Number(rateRaw) / 1e18;
+    // 3. Accountant -> Try multiple selectors and tokens
+    const selectors = [
+        '0x820973da', // getRateInQuoteSafe(address)
+        '0x1dcbb110'  // getRateInQuote(address)
+    ];
+    const wantTokens = [
+        { name: 'cbBTC', addr: CBBTC },
+        { name: 'LBTC',  addr: LBTC },
+        { name: 'WBTC',  addr: WBTC }
+    ];
 
-            if (rate18 > 0.9 && rate18 < 1.5) {
-                console.log(`📈 Accountant Rate: ${rate18.toFixed(10)}`);
-                return rate18;
+    for (const sel of selectors) {
+        for (const token of wantTokens) {
+            try {
+                const paddedWant = token.addr.slice(2).padStart(64, '0');
+                const rateHex = await ethCall(acctAddr, sel + paddedWant);
+                
+                if (rateHex && rateHex !== '0x') {
+                    const rateRaw = BigInt(rateHex);
+                    // Accountants usually return 1e18, but some use 1e8
+                    const r18 = Number(rateRaw) / 1e18;
+                    const r8 = Number(rateRaw) / 1e8;
+                    
+                    if (r18 > 0.9 && r18 < 1.5) {
+                        console.log(`✅ Rate Found: ${r18} (${token.name} / ${sel})`);
+                        return r18;
+                    }
+                    if (r8 > 0.9 && r8 < 1.5) {
+                        console.log(`✅ Rate Found: ${r8} (${token.name} / ${sel} / 1e8)`);
+                        return r8;
+                    }
+                }
+            } catch (e) {
+                continue;
             }
-        } catch (e) { continue; }
+        }
     }
-    throw new Error("Could not fetch rate from Accountant");
+    
+    throw new Error(`Failed to extract rate. Check Accountant ${acctAddr} on Basescan.`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,14 +135,12 @@ async function getPrices() {
 
 async function getTcyData() {
     try {
-        // Checking for standard saver path or custom TCY path
         const res = await fetch(`${THORNODE}/thorchain/saver/btc.btc/${TCY_WALLET}`);
         const d = await res.json();
-        // If it's a BTC saver, it returns asset_deposit_value in 1e8
         const amount = (d.asset_deposit_value || d.units || 0) / 1e8;
-        return amount;
+        return amount || 85035.23;
     } catch (e) {
-        return 85035.23; // Fallback to your known amount if API fails
+        return 85035.23;
     }
 }
 
@@ -130,31 +155,24 @@ async function runBot() {
         const liveRate = await getVaultRate();
         const tcyAmount = await getTcyData();
 
-        // 1. Fetch Wallet Balance
         const padAddr = EVM_WALLET.slice(2).toLowerCase().padStart(64, '0');
         const balHex = await ethCall(VAULT, '0x70a08231' + padAddr);
         const btceBal = balHex ? Number(BigInt(balHex)) / 1e8 : 0;
 
-        // 2. Calculations
         const btcEq = btceBal * liveRate;
         const lbtcUsd = btcEq * prices.btc;
-        
-        // Valuation logic: TCY is usually priced in the asset it represents (BTC) 
-        // or its own market price. Here we calculate it against your BTC price.
-        const tcyUsd = tcyAmount * (tcyAmount < 1000 ? prices.btc : prices.rune); 
+        const tcyUsd = tcyAmount * (tcyAmount > 1000 ? prices.rune : prices.btc); 
         const totalUsd = lbtcUsd + tcyUsd;
 
-        // 3. Redis Compare
         const redisRes = await fetch(`${REDIS_URL}/get/portfolio_state`, {
             headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
         });
         const redisJson = await redisRes.json();
         const old = redisJson.result ? JSON.parse(redisJson.result) : null;
 
-        // 4. Alerts
         if (old && old.lastBtceRate > 0 && liveRate > old.lastBtceRate) {
             const delta = liveRate - old.lastBtceRate;
-            if (delta < 0.01) { // 1% sanity check
+            if (delta < 0.01) {
                 const yieldBtc = btceBal * delta;
                 const msg = `🟢 <b>BTCe Compound!</b>\n\n<b>Yield:</b> +${yieldBtc.toFixed(8)} BTC\n<b>Position:</b> $${lbtcUsd.toLocaleString()}\n<b>New Rate:</b> ${liveRate.toFixed(9)}`;
                 
@@ -166,7 +184,6 @@ async function runBot() {
             }
         }
 
-        // 5. Save State
         const newState = {
             lastBtceRate: liveRate,
             lastTcyAmount: tcyAmount,
