@@ -1,4 +1,4 @@
-// 1. Load your hidden GitHub Secrets
+// 1. Load hidden GitHub Secrets
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const TG_TOKEN = process.env.TELEGRAM_TOKEN;
@@ -22,11 +22,15 @@ async function rpc(method, params) {
 // Helper: Send Telegram Message
 async function sendTelegram(text) {
     if (!TG_TOKEN || !TG_CHAT) return;
-    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: 'HTML' })
-    });
+    try {
+        await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: 'HTML' })
+        });
+    } catch (e) {
+        console.error("Telegram error:", e.message);
+    }
 }
 
 // Helper: Upstash Redis DB Read/Write
@@ -35,7 +39,8 @@ async function getDbState() {
         headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
     });
     const json = await res.json();
-    return json.result ? JSON.parse(json.result) : { lastRate: 0, lastBtceBal: 0 };
+    // Upstash returns the string value in the .result property
+    return (json.result && json.result !== "null") ? JSON.parse(json.result) : { lastRate: 0, lastBtceBal: 0 };
 }
 
 async function saveDbState(state) {
@@ -49,40 +54,46 @@ async function saveDbState(state) {
 async function runBot() {
     console.log("🤖 Waking up Tracker Bot...");
     
-    // 1. Get memory from Upstash
-    const state = await getDbState();
-    
-    try {
-        // 2. Check BTCe Balance of Wallet
-        const padAddr = EVM_WALLET.slice(2).padStart(64, '0');
-        const balHex = await rpc('eth_call', [{ to: VAULT, data: '0x70a08231' + padAddr }, 'latest']);
-        const currentBtceBal = Number(BigInt(balHex)) / 1e8;
+    if (!EVM_WALLET || !REDIS_URL || !REDIS_TOKEN) {
+        console.error("❌ Missing required Secrets. Check your GitHub Settings.");
+        process.exit(1);
+    }
 
-        // 3. Check Live BTCe Exchange Rate (Standard ERC4626 totalAssets / totalSupply)
+    try {
+        const state = await getDbState();
+        
+        // 1. Check BTCe Balance of Wallet
+        const padAddr = EVM_WALLET.slice(2).toLowerCase().padStart(64, '0');
+        const balHex = await rpc('eth_call', [{ to: VAULT, data: '0x70a08231' + padAddr }, 'latest']);
+        const currentBtceBal = balHex ? Number(BigInt(balHex)) / 1e8 : 0;
+
+        // 2. Check Live BTCe Exchange Rate
         const assetsHex = await rpc('eth_call', [{ to: VAULT, data: '0x01e1d114' }, 'latest']);
         const sharesHex = await rpc('eth_call', [{ to: VAULT, data: '0x18160ddd' }, 'latest']);
         
-        if (assetsHex !== '0x' && sharesHex !== '0x') {
+        if (assetsHex && sharesHex && assetsHex !== '0x' && sharesHex !== '0x') {
             const liveRate = Number(BigInt(assetsHex)) / Number(BigInt(sharesHex));
-            console.log(`Live Rate: ${liveRate} | Old Rate: ${state.lastRate}`);
+            console.log(`Current Rate: ${liveRate} | Stored Rate: ${state.lastRate}`);
 
-            // 4. Compare and Alert if Compounded
+            // 3. Compare and Alert if Compounded
             if (state.lastRate > 0 && liveRate > (state.lastRate + 0.00000001) && currentBtceBal > 0) {
                 const yieldBtc = currentBtceBal * (liveRate - state.lastRate);
-                
                 console.log(`🎉 COMPOUND DETECTED: +${yieldBtc} BTC`);
                 
                 await sendTelegram(
                     `🟢 <b>Background Bot Alert</b>\n\n<b>BTCe Vault Compounded!</b>\n<b>Yield Generated:</b> +${yieldBtc.toFixed(6)} BTC\n<b>New Rate:</b> 1 BTCe = ${liveRate.toFixed(8)} BTC`
                 );
+            } else {
+                console.log("ℹ️ No compound detected or first run.");
             }
 
-            // 5. Save the new rate to Upstash so it remembers for next time
+            // 4. Save state
             await saveDbState({ lastRate: liveRate, lastBtceBal: currentBtceBal });
-            console.log("💾 State saved to Upstash Redis.");
+            console.log("💾 State updated in Upstash.");
         }
     } catch (e) {
-        console.error("❌ Bot encountered an error:", e.message);
+        console.error("❌ Runtime Error:", e.message);
+        process.exit(1);
     }
 }
 
