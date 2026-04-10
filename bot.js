@@ -33,14 +33,25 @@ async function runBot() {
         // 1. Get Wallet Balance
         const padAddr = EVM_WALLET.slice(2).toLowerCase().padStart(64, '0');
         const balHex = await rpc('eth_call', [{ to: VAULT, data: '0x70a08231' + padAddr }, 'latest']);
-        const bal = balHex ? Number(BigInt(balHex)) / 1e8 : 0;
+        const bal = balHex && balHex !== '0x' ? Number(BigInt(balHex)) / 1e8 : 0;
         console.log(`💰 Balance: ${bal} BTCe`);
 
-        // 2. Get Exchange Rate
-        const assetsHex = await rpc('eth_call', [{ to: VAULT, data: '0x01e1d114' }, 'latest']);
-        const sharesHex = await rpc('eth_call', [{ to: VAULT, data: '0x18160ddd' }, 'latest']);
-        const liveRate = Number(BigInt(assetsHex)) / Number(BigInt(sharesHex));
+        // 2. Get Exchange Rate using the "convertToAssets" function for 1 share (0x07a2d13a)
+        // This is more reliable than doing the division ourselves
+        const oneShare = "1".padEnd(9, '0').padStart(64, '0'); // 1.0 share in 8 decimals
+        const rateHex = await rpc('eth_call', [{ to: VAULT, data: '0x07a2d13a' + oneShare }, 'latest']);
+        
+        let liveRate = 0;
+        if (rateHex && rateHex !== '0x') {
+            liveRate = Number(BigInt(rateHex)) / 1e8;
+        }
+
         console.log(`📈 Live Rate: ${liveRate}`);
+
+        if (liveRate === 0) {
+            console.error("🛑 Could not fetch rate. Skipping save to prevent overwriting with 0.");
+            return;
+        }
 
         // 3. Get Previous State from Upstash
         const redisRes = await fetch(`${REDIS_URL}/get/bot_state`, {
