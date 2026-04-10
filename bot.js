@@ -98,3 +98,4 @@ async function runBot() {
 }
 
 runBot();
+sendTelegram("✅ Bot is online and watching your vault!");
