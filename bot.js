@@ -1,55 +1,73 @@
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const TG_TOKEN = process.env.TELEGRAM_TOKEN;
+const TG_CHAT = process.env.TELEGRAM_CHAT_ID;
+const EVM_WALLET = process.env.EVM_WALLET;
+
+const RPC_URL = "https://mainnet.base.org";
+const VAULT = "0x3a4baaBf4DC9910596821615e848f0e6545762F3";
+
+async function rpc(method, params) {
+    const res = await fetch(RPC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
+    });
+    const json = await res.json();
+    return json.result;
+}
+
+async function sendTelegram(text) {
+    if (!TG_TOKEN || !TG_CHAT) return;
+    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: 'HTML' })
+    });
+}
+
 async function runBot() {
-    console.log("🚀 BOT STARTING...");
-
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-    const wallet = process.env.EVM_WALLET;
-
-    if (!url || !token || !wallet) {
-        console.error("❌ ERROR: Missing Secrets!");
-        process.exit(1);
-    }
-
-    // Try a different, official Base RPC
-    const RPC_URL = "https://mainnet.base.org"; 
+    console.log("🤖 Bot Waking Up...");
 
     try {
-        console.log("📡 Connecting to Base Blockchain via mainnet.base.org...");
-        
-        const rpcRes = await fetch(RPC_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                jsonrpc: '2.0', 
-                id: 1, 
-                method: 'eth_blockNumber', 
-                params: [] 
-            })
-        });
+        // 1. Get Wallet Balance
+        const padAddr = EVM_WALLET.slice(2).toLowerCase().padStart(64, '0');
+        const balHex = await rpc('eth_call', [{ to: VAULT, data: '0x70a08231' + padAddr }, 'latest']);
+        const bal = balHex ? Number(BigInt(balHex)) / 1e8 : 0;
+        console.log(`💰 Balance: ${bal} BTCe`);
 
-        // Check if the response is actually JSON before parsing
-        const contentType = rpcRes.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-            const text = await rpcRes.text();
-            console.error("❌ RPC returned non-JSON response. First 50 chars:", text.slice(0, 50));
-            throw new Error("RPC provider returned HTML instead of JSON (likely rate limited).");
+        // 2. Get Exchange Rate
+        const assetsHex = await rpc('eth_call', [{ to: VAULT, data: '0x01e1d114' }, 'latest']);
+        const sharesHex = await rpc('eth_call', [{ to: VAULT, data: '0x18160ddd' }, 'latest']);
+        const liveRate = Number(BigInt(assetsHex)) / Number(BigInt(sharesHex));
+        console.log(`📈 Live Rate: ${liveRate}`);
+
+        // 3. Get Previous State from Upstash
+        const redisRes = await fetch(`${REDIS_URL}/get/bot_state`, {
+            headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+        });
+        const redisJson = await redisRes.json();
+        const state = (redisJson.result && redisJson.result !== "null") ? JSON.parse(redisJson.result) : { lastRate: 0 };
+
+        // 4. Compare & Alert
+        if (state.lastRate > 0 && liveRate > (state.lastRate + 0.00000001) && bal > 0) {
+            const yieldBtc = bal * (liveRate - state.lastRate);
+            console.log(`🎉 COMPOUND! +${yieldBtc} BTC`);
+            await sendTelegram(`🟢 <b>BTCe Vault Compounded!</b>\n\n<b>Yield:</b> +${yieldBtc.toFixed(6)} BTC\n<b>New Rate:</b> 1 BTCe = ${liveRate.toFixed(8)} BTC`);
+        } else {
+            console.log("ℹ️ No new compound detected.");
         }
 
-        const rpcJson = await rpcRes.json();
-        console.log("✅ Blockchain Link OK. Current Block:", parseInt(rpcJson.result, 16));
-
-        console.log("☁️ Testing Upstash Connection...");
-        const redisRes = await fetch(`${url}/set/test_run/${Date.now()}`, {
-            headers: { Authorization: `Bearer ${token}` }
+        // 5. Save New State
+        await fetch(`${REDIS_URL}/set/bot_state`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
+            body: JSON.stringify({ lastRate: liveRate })
         });
-        
-        console.log("✅ Upstash Connection OK!");
-        console.log("🏁 Setup complete. Your infrastructure is ready.");
+        console.log("💾 State saved to Upstash.");
 
-    } catch (err) {
-        console.error("🛑 ERROR DURING RUN:");
-        console.error(err.message);
-        process.exit(1);
+    } catch (e) {
+        console.error("🛑 Error:", e.message);
     }
 }
 
